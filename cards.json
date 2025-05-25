@@ -1,0 +1,164 @@
+[
+  {
+    "code_name": "G0-01",
+    "name": "เบเบี้ตี๋",
+    "grade": 0,
+    "power": 6000,
+    "shield": 10000,
+    "skill_description": "[AUTO] เมื่อถูก Ride : จั่ว 1",
+    "type_role": "Starter"
+  },
+  {
+    "code_name": "G0-02",
+    "name": "บูม",
+    "grade": 0,
+    "power": 5000,
+    "shield": 5000,
+    "skill_description": "[TRIGGER] +10000 P & Heal 1 (ถ้าดาเมจเรา ≥ คู่แข่ง)",
+    "type_role": "Trigger - Heal"
+  },
+  {
+    "code_name": "G0-03",
+    "name": "น้ำ",
+    "grade": 0,
+    "power": 5000,
+    "shield": 5000,
+    "skill_description": "[TRIGGER] +10000 P & Draw 1",
+    "type_role": "Trigger - Draw"
+  },
+  {
+    "code_name": "G0-04",
+    "name": "ตะวัน",
+    "grade": 0,
+    "power": 5000,
+    "shield": 5000,
+    "skill_description": "[TRIGGER] +10000 P & Critical +1",
+    "type_role": "Trigger - Critical"
+  },
+  {
+    "code_name": "G1-01",
+    "name": "ดิว",
+    "grade": 1,
+    "power": 8000,
+    "shield": 10000,
+    "skill_description": "[AUTO] หลัง Boost สำเร็จ → เลือก RC หน้า 1 ใบ +3000 P เทิร์นนี้",
+    "type_role": "Booster"
+  },
+  {
+    "code_name": "G1-02",
+    "name": "เล้ง",
+    "grade": 1,
+    "power": 7000,
+    "shield": 0,
+    "skill_description": "AUTO วาง GC : ทิ้งการ์ด 1 → ยกเลิกการโจมตี นั้น",
+    "type_role": "Sentinel • Perfect Guard"
+  },
+  {
+    "code_name": "G1-03",
+    "name": "คิน",
+    "grade": 1,
+    "power": 9000,
+    "shield": 5000,
+    "skill_description": "[AUTO] เมื่อ Intercept → ยูนิตนี้ +5000 Shield (รวมเป็น 10k)",
+    "type_role": "Interceptor"
+  },
+  {
+    "code_name": "G1-04",
+    "name": "เกม",
+    "grade": 1,
+    "power": 7000,
+    "shield": 10000,
+    "skill_description": "[AUTO] วาง RC → จั่ว 1 แล้วทิ้ง 1",
+    "type_role": "Draw Engine"
+  },
+  {
+    "code_name": "G1-05",
+    "name": "ปลั๊ก",
+    "grade": 1,
+    "power": 8000,
+    "shield": 5000,
+    "skill_description": "[AUTO] วาง VC/RC → ดู 3 ใบบนเด็ค เลือก 1 เข้ามือ ที่เหลือล่างเด็ค",
+    "type_role": "Searcher"
+  },
+  {
+    "code_name": "G2-01",
+    "name": "พี่เทียน",
+    "grade": 2,
+    "power": 10000,
+    "shield": 5000,
+    "skill_description": "[CONT] ถ้าคุณมียูนิตแถวหน้ามากกว่าคู่แข่ง → ยูนิตนี้ +3000 P",
+    "type_role": "Front-Attacker"
+  },
+  {
+    "code_name": "G2-02",
+    "name": "พี่ไออุ่น",
+    "grade": 2,
+    "power": 10000,
+    "shield": 5000,
+    "skill_description": "[AUTO] โจมตี Hit VG → จั่ว 1",
+    "type_role": "Recharger"
+  },
+  {
+    "code_name": "G2-03",
+    "name": "พี่ปีใหม่",
+    "grade": 2,
+    "power": 10000,
+    "shield": 5000,
+    "skill_description": "[CONT] ถ้า Soul ≥ 3 → ยูนิตนี้ +3000 P",
+    "type_role": "Soul-Boost"
+  },
+  {
+    "code_name": "G2-04",
+    "name": "พี่เต็งหนึ่ง",
+    "grade": 2,
+    "power": 12000,
+    "shield": 5000,
+    "skill_description": "[AUTO] วาง RC → เลือก RG เกรด 1 ของคู่แข่ง 1 ใบ Retire",
+    "type_role": "Board Control"
+  },
+  {
+    "code_name": "G3-01",
+    "name": "อ.บลิ๊งค์",
+    "grade": 3,
+    "power": 13000,
+    "shield": 0,
+    "skill_description": "[AUTO] เมื่อยูนิตนี้โจมตี → เลือกยูนิตคู่แข่ง 1 ใบ Retire",
+    "type_role": "Field Cleaner"
+  },
+  {
+    "code_name": "G3-02",
+    "name": "อ.ปิ",
+    "grade": 3,
+    "power": 13000,
+    "shield": 0,
+    "skill_description": "[AUTO] Ride บน VG → ค้น \"เล้ง\" ≤ 1 ใบเข้ามือ",
+    "type_role": "Sentinel Tutor"
+  },
+  {
+    "code_name": "G3-03",
+    "name": "อ.ต้น",
+    "grade": 3,
+    "power": 13000,
+    "shield": 0,
+    "skill_description": "AUTO วาง GC → ยูนิตนี้ +10000 Shield; ถ้ากันผ่าน → เลือก RG เรา 1 ใบ +5000 P จนจบเทิร์นถัดไป",
+    "type_role": "Shield Support"
+  },
+  {
+    "code_name": "G3-04",
+    "name": "อ.หยุน",
+    "grade": 3,
+    "power": 13000,
+    "shield": 0,
+    "skill_description": "[CONT] ถ้า Soul ≥ 5 → VG นี้ +1 Critical",
+    "type_role": "Crit Pressure"
+  },
+  {
+    "code_name": "G4-01",
+    "name": "อ.ตี๋",
+    "grade": 4,
+    "power": 15000,
+    "shield": 0,
+    "skill_description": "[AUTO] เมื่อยูนิตนี้โจมตี VG → Stand ยูนิตแถวหน้าอื่น 2 ใบ & ยูนิตนี้ +1 Critical จนจบ Battle",
+    "type_role": "Finisher"
+  }
+]
