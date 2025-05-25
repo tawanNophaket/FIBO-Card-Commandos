@@ -66,15 +66,12 @@ public:
 
   // --- Battle Phase Actions ---
   std::vector<std::pair<int, std::string>> chooseAttacker();
-  // int chooseTarget(const Player& opponent); // จะ implement เมื่อมี opponent object
   int chooseBooster(int attacker_unit_status_idx);
   void restUnit(int unit_status_idx);
   bool isUnitStanding(int unit_status_idx) const;
   std::optional<Card> getUnitAtStatusIndex(int unit_status_idx) const;
-  int getUnitPowerAtStatusIndex(int unit_status_idx, int booster_unit_status_idx = -1, bool for_defense = false) const; // เพิ่ม for_defense flag
+  int getUnitPowerAtStatusIndex(int unit_status_idx, int booster_unit_status_idx = -1, bool for_defense = false) const;
 
-  // *** เพิ่มเมธอดสำหรับ Guard ***
-  // คืนค่า Shield รวมที่ได้จากการ Guard
   int performGuardStep(int incoming_attack_power, const std::optional<Card> &target_unit_opt);
 
   // --- Basic Actions (เบื้องต้น) ---
@@ -85,7 +82,7 @@ public:
   void displayHand(bool show_details = false) const;
   void displayField(bool show_opponent_field_for_targeting = false) const;
   void displayFullStatus() const;
-  void displayGuardianZone() const; // เพิ่มเมธอดแสดง Guardian Zone
+  void displayGuardianZone() const;
 
   // --- Getters ---
   std::string getName() const;
@@ -94,12 +91,14 @@ public:
   size_t getDamageCount() const;
   const std::optional<Card> &getVanguard() const;
   const std::array<std::optional<Card>, NUM_REAR_GUARD_CIRCLES> &getRearGuards() const;
+  Deck &getDeck();             // <<< เพิ่มเมธอดนี้ (คืน non-const reference เพื่อให้สามารถเรียก draw())
+  const Deck &getDeck() const; // <<< เพิ่ม const version สำหรับการเรียกจาก const methods (เช่น getSize(), isEmpty())
 
   // --- Game Mechanics ---
   void takeDamage(const Card &damage_card);
   void placeCardIntoSoul(const Card &card);
   void discardFromHandToDrop(size_t hand_card_index);
-  void clearGuardianZoneAndMoveToDrop(); // เปลี่ยนชื่อให้ชัดเจน
+  void clearGuardianZoneAndMoveToDrop();
 
 private:
   void drawCards(int num_to_draw);

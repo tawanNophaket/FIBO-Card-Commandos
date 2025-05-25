@@ -24,14 +24,13 @@ void Player::drawCards(int num_to_draw)
 {
   for (int i = 0; i < num_to_draw; ++i)
   {
-    std::optional<Card> drawn_card = deck.draw();
+    std::optional<Card> drawn_card = deck.draw(); // เรียก deck.draw() โดยตรง
     if (drawn_card.has_value())
     {
       hand.push_back(drawn_card.value());
     }
     else
     {
-      // std::cout << "*** ผู้เล่น '" << name << "' ไม่สามารถจั่วการ์ดได้ เด็คหมด! ***" << std::endl;
       break;
     }
   }
@@ -60,7 +59,7 @@ void Player::performStandPhase()
 bool Player::performDrawPhase()
 {
   if (deck.isEmpty())
-  {
+  { // เรียก deck.isEmpty() โดยตรง
     return false;
   }
   drawCards(1);
@@ -243,7 +242,7 @@ int Player::getUnitPowerAtStatusIndex(int unit_status_idx, int booster_unit_stat
   }
 
   if (!for_defense && booster_unit_status_idx != -1)
-  { // Booster มีผลเฉพาะตอนโจมตี
+  {
     std::optional<Card> booster_opt = getUnitAtStatusIndex(booster_unit_status_idx);
     if (booster_opt.has_value())
     {
@@ -253,7 +252,6 @@ int Player::getUnitPowerAtStatusIndex(int unit_status_idx, int booster_unit_stat
   return total_power;
 }
 
-// *** Implement เมธอดสำหรับ Guard ***
 int Player::performGuardStep(int incoming_attack_power, const std::optional<Card> &target_unit_opt)
 {
   std::cout << "\n--- " << name << ": ขั้นตอนการ Guard ---" << std::endl;
@@ -265,54 +263,115 @@ int Player::performGuardStep(int incoming_attack_power, const std::optional<Card
   }
 
   int total_shield_value = 0;
-  char guard_choice = 'y';
+  // char guard_choice = 'y'; // การตัดสินใจจะมาจาก main.cpp
 
-  // (ยังไม่ได้ implement Perfect Guard หรือ Intercept ในขั้นนี้)
+  // Loop การ Guard จะถูกควบคุมจาก main.cpp
+  // ฟังก์ชันนี้อาจจะเปลี่ยนเป็นการรับ index การ์ดจากมือที่จะ Guard ทีละใบ
+  // หรือ main.cpp เรียก displayHand() แล้วรับ input แล้วเรียก player->guardWithCard(index)
+  // เพื่อความง่ายในตอนนี้ จะยังคงโครงสร้างเดิมที่รับ input เองไปก่อน
+  // แต่ควรย้าย loop และ input ไป main.cpp
 
-  while (guard_choice == 'y' || guard_choice == 'Y')
+  // ส่วนนี้จะถูกเรียกซ้ำจาก main.cpp ถ้าผู้เล่นต้องการ Guard เพิ่ม
+  // ดังนั้น ฟังก์ชันนี้ควรจะรับการ์ดที่จะ Guard และ update guardian_zone
+  // แล้วคืน shield รวม *ของ Guardian Zone ปัจจุบัน*
+  // หรืออีกวิธีคือ ให้ main.cpp ส่ง index มา แล้วฟังก์ชันนี้ทำการย้ายการ์ด
+
+  // *** หมายเหตุ: เพื่อให้ main.cpp ควบคุม loop การ Guard ได้ดีขึ้น ***
+  // *** ฟังก์ชันนี้ควรจะเปลี่ยนเป็นการรับ hand_card_index ***
+  // *** แล้วทำการ Guard ด้วยการ์ดนั้น และคืน shield ของการ์ดนั้น ***
+  // *** main.cpp จะวน loop ถามว่าจะ Guard อีกไหม และรวม shield เอง ***
+  // *** แต่เพื่อไม่ให้กระทบ main.cpp มาก จะยังคง loop นี้ไว้ แต่ควรปรับปรุง ***
+
+  // สมมติว่า main.cpp จะเรียกฟังก์ชันนี้ใน loop และฟังก์ชันนี้จะถามว่าจะ Guard ด้วยใบไหน
+  // และคืนค่า shield ที่เพิ่มขึ้นในแต่ละครั้ง หรือ shield รวมของ Guardian Zone
+  // เพื่อให้ง่าย ฟังก์ชันนี้จะถามทีละใบ และ main.cpp จะวนถามว่าจะ Guard อีกไหม
+
+  // สมมติว่าฟังก์ชันนี้ถูกเรียกเพื่อเลือกการ์ด 1 ใบมา Guard
+  if (hand.empty())
+  {
+    std::cout << "ไม่เหลือการ์ดบนมือให้ Guard แล้ว!" << std::endl;
+    return 0; // คืน 0 shield ถ้าไม่มีการ์ด
+  }
+  std::cout << "\nการ์ดบนมือของคุณ:" << std::endl;
+  displayHand(true);
+  std::cout << "Guardian Zone ปัจจุบัน: ";
+  displayGuardianZone();
+
+  int card_idx_to_guard = -1;
+  // การรับ input จะย้ายไปที่ main.cpp
+  // ที่นี่จะสมมติว่า main.cpp ส่ง card_idx_to_guard มา
+  // แต่ในโค้ดนี้ยังไม่ได้แก้ไขแบบนั้น
+  // ดังนั้นส่วนนี้จะยังทำงานไม่ถูกต้อง 100% กับ loop ใน main.cpp
+  // ต้องให้ main.cpp เรียก Player::guardWithCardFromHand(index) แล้ว main.cpp รวม shield เอง
+
+  // *** โค้ดส่วนล่างนี้เป็นเพียง Placeholder สำหรับการ Guard ทีละใบ ***
+  // *** และยังไม่ได้ถูกเรียกใช้อย่างถูกต้องจาก main.cpp ในเวอร์ชันล่าสุด ***
+  // *** main.cpp จะต้องมี loop และรับ input index แล้วเรียกเมธอดใหม่ เช่น Player::addCardToGuardianZone(index) ***
+
+  // ตัวอย่าง: (สมมติว่า main.cpp ส่ง index มา)
+  // if (card_idx_to_guard >= 0 && static_cast<size_t>(card_idx_to_guard) < hand.size()) {
+  //     Card card_for_guard = hand[static_cast<size_t>(card_idx_to_guard)];
+  //     guardian_zone.push_back(card_for_guard);
+  //     total_shield_value += card_for_guard.getShield(); // Shield ของใบที่เพิ่ม
+  //     hand.erase(hand.begin() + static_cast<size_t>(card_idx_to_guard));
+  //     std::cout << "ใช้ '" << card_for_guard.getName() << "' (Shield: " << card_for_guard.getShield()
+  //               << ") ในการ Guard. Shield ที่เพิ่ม: " << card_for_guard.getShield() << std::endl;
+  //     return card_for_guard.getShield(); // คืน shield ของใบนี้
+  // }
+  // return 0; // ถ้าเลือกไม่ถูกต้อง หรือไม่ Guard
+
+  // ** โค้ดด้านบนเป็นแนวคิด แต่เพื่อให้ทำงานกับ main.cpp ปัจจุบัน **
+  // ** main.cpp จะวนลูปเรียก performGuardStep ซึ่งไม่ถูกต้อง **
+  // ** แก้ไข: performGuardStep จะ loop เอง และ main.cpp จะเรียกครั้งเดียว **
+  char continue_guard = 'y';
+  while (continue_guard == 'y' || continue_guard == 'Y')
   {
     if (hand.empty())
     {
-      std::cout << "ไม่เหลือการ์ดบนมือให้ Guard แล้ว!" << std::endl;
+      std::cout << "ไม่มีการ์ดบนมือเหลือให้ Guard" << std::endl;
       break;
     }
-    std::cout << "\nการ์ดบนมือของคุณ:" << std::endl;
-    displayHand(true); // แสดง power/shield
+    displayHand(true);
     std::cout << "Guardian Zone ปัจจุบัน: ";
     displayGuardianZone();
     std::cout << "Shield รวมปัจจุบัน: " << total_shield_value << std::endl;
-
-    // (main.cpp ควรจะเรียก getActionInput)
-    // นี่เป็นแค่โครงเบื้องต้น การรับ input จริงๆ จะซับซ้อนกว่านี้ใน main.cpp
-    int card_idx_to_guard = -1;
-    std::cout << "เลือกหมายเลขการ์ดที่จะใช้ Guard (-1 เพื่อหยุด Guard): ";
-    std::cin >> card_idx_to_guard;
+    std::cout << "เลือกการ์ดจากมือเพื่อ Guard (-1 เพื่อหยุด Guard, หรือ 'n' ในคำถามถัดไป): ";
+    std::string s_choice;
+    std::cin >> s_choice;
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-    if (card_idx_to_guard == -1)
+    int choice_idx = -1;
+    try
     {
-      break;
+      choice_idx = std::stoi(s_choice);
+    }
+    catch (...)
+    {
+      choice_idx = -2; /*invalid input*/
     }
 
-    if (card_idx_to_guard >= 0 && static_cast<size_t>(card_idx_to_guard) < hand.size())
+    if (choice_idx == -1)
+      break;
+    if (choice_idx >= 0 && static_cast<size_t>(choice_idx) < hand.size())
     {
-      Card card_for_guard = hand[static_cast<size_t>(card_idx_to_guard)];
-      // ตรวจสอบว่าเป็น PG หรือไม่ (ยังไม่ได้ทำ)
-      // G1-02 เล้ง (Sentinel • Perfect Guard) - สกิล: AUTO วาง GC : ทิ้งการ์ด 1 → ยกเลิกการโจมตี นั้น
-      // ในที่นี้จะใช้ Shield value ของการ์ดไปก่อน
-      guardian_zone.push_back(card_for_guard);
-      total_shield_value += card_for_guard.getShield();
-      hand.erase(hand.begin() + static_cast<size_t>(card_idx_to_guard));
-      std::cout << "ใช้ '" << card_for_guard.getName() << "' (Shield: " << card_for_guard.getShield()
-                << ") ในการ Guard. Shield รวม: " << total_shield_value << std::endl;
+      Card card_to_guard = hand[static_cast<size_t>(choice_idx)];
+      guardian_zone.push_back(card_to_guard);
+      total_shield_value += card_to_guard.getShield();
+      hand.erase(hand.begin() + static_cast<size_t>(choice_idx));
+      std::cout << "ใช้ '" << card_to_guard.getName() << "' (Shield " << card_to_guard.getShield() << ") Guard. Shield รวม: " << total_shield_value << std::endl;
     }
     else
     {
-      std::cout << "หมายเลขการ์ดไม่ถูกต้อง!" << std::endl;
+      std::cout << "เลือกไม่ถูกต้อง" << std::endl;
     }
-    // ถามว่าจะ Guard อีกไหม (main.cpp จะจัดการ loop นี้)
+    if (hand.empty())
+    {
+      std::cout << "ไม่มีการ์ดบนมือเหลือให้ Guard" << std::endl;
+      break;
+    }
+    std::cout << "ต้องการ Guard เพิ่มหรือไม่ (y/n): ";
+    std::cin >> continue_guard;
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
   }
-  std::cout << "จบขั้นตอนการ Guard. Shield ที่ได้ทั้งหมด: " << total_shield_value << std::endl;
   return total_shield_value;
 }
 
@@ -320,7 +379,7 @@ void Player::displayGuardianZone() const
 {
   if (guardian_zone.empty())
   {
-    std::cout << "(ว่าง)" << std::endl;
+    std::cout << "(ว่าง)";
   }
   else
   {
@@ -328,23 +387,20 @@ void Player::displayGuardianZone() const
     {
       std::cout << "[" << card.getName() << " S:" << card.getShield() << "] ";
     }
-    std::cout << std::endl;
   }
+  std::cout << std::endl;
 }
 
-// --- Information Display ---
 std::string formatCardForDisplay(const std::optional<Card> &card_opt, int width, bool is_standing = true, bool is_vc = false)
 {
   std::ostringstream oss;
   std::string content;
-
   if (card_opt.has_value())
   {
     const Card &card = card_opt.value();
     std::string grade_str = "G" + std::to_string(card.getGrade());
     std::string name_str = card.getName();
     std::string status_str = is_standing ? "" : " (R)";
-
     std::string full_text = grade_str + " " + name_str + status_str;
     if (full_text.length() > static_cast<size_t>(width))
     {
@@ -363,7 +419,6 @@ std::string formatCardForDisplay(const std::optional<Card> &card_opt, int width,
   {
     content = "[   ว่าง   ]";
   }
-
   int text_len = 0;
   for (char c : content)
   {
@@ -372,7 +427,6 @@ std::string formatCardForDisplay(const std::optional<Card> &card_opt, int width,
   int padding = width - text_len;
   int pad_left = padding / 2;
   int pad_right = padding - pad_left;
-
   oss << std::string(pad_left, ' ') << content << std::string(pad_right, ' ');
   return oss.str();
 }
@@ -384,13 +438,11 @@ void Player::displayField(bool show_opponent_field_for_targeting) const
   const std::string H_BORDER_THIN_SEGMENT = std::string(card_cell_width, '-');
   const std::string H_BORDER_THICK_SEGMENT = std::string(card_cell_width, '=');
   const std::string CORNER = "+";
-
   std::string row_separator = CORNER;
   for (int i = 0; i < 3; ++i)
   {
     row_separator += H_BORDER_THIN_SEGMENT + CORNER;
   }
-
   std::string vc_row_separator_left = CORNER + H_BORDER_THIN_SEGMENT + CORNER;
   std::string vc_row_separator_center = H_BORDER_THICK_SEGMENT;
   std::string vc_row_separator_right = CORNER + H_BORDER_THIN_SEGMENT + CORNER;
@@ -402,7 +454,6 @@ void Player::displayField(bool show_opponent_field_for_targeting) const
             << " | โซล: " << std::left << std::setw(2) << soul.size()
             << " | ดรอป: " << std::left << std::setw(2) << drop_zone.size() << std::endl;
   Player::printDisplayLine('~', 70);
-
   std::cout << "  แถวหน้า:" << std::endl;
   std::cout << "  " << vc_row_separator_left << vc_row_separator_center << vc_row_separator_right << std::endl;
   std::cout << "  " << V_BORDER << formatCardForDisplay(rear_guard_circles[RC_FRONT_LEFT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_FRONT_LEFT)])
@@ -415,7 +466,6 @@ void Player::displayField(bool show_opponent_field_for_targeting) const
             << V_BORDER << std::endl;
   std::cout << "  " << vc_row_separator_left << vc_row_separator_center << vc_row_separator_right << std::endl;
   std::cout << std::endl;
-
   std::cout << "  แถวหลัง:" << std::endl;
   std::cout << "  " << row_separator << std::endl;
   std::cout << "  " << V_BORDER << formatCardForDisplay(rear_guard_circles[RC_BACK_LEFT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_BACK_LEFT)])
@@ -427,7 +477,6 @@ void Player::displayField(bool show_opponent_field_for_targeting) const
             << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << "   (RC BR)"
             << V_BORDER << std::endl;
   std::cout << "  " << row_separator << std::endl;
-
   std::cout << "\nDamage Zone (" << damage_zone.size() << "): ";
   if (damage_zone.empty())
   {
@@ -477,13 +526,17 @@ void Player::displayFullStatus() const
   displayField();
   displayHand(true);
 }
+// --- Getters ---
 std::string Player::getName() const { return name; }
 size_t Player::getHandSize() const { return hand.size(); }
 const std::vector<Card> &Player::getHand() const { return hand; }
 size_t Player::getDamageCount() const { return damage_zone.size(); }
 const std::optional<Card> &Player::getVanguard() const { return vanguard_circle; }
 const std::array<std::optional<Card>, NUM_REAR_GUARD_CIRCLES> &Player::getRearGuards() const { return rear_guard_circles; }
+Deck &Player::getDeck() { return deck; }             // Non-const version
+const Deck &Player::getDeck() const { return deck; } // Const version
 
+// --- Game Mechanics ---
 void Player::takeDamage(const Card &damage_card)
 {
   std::cout << "🩸 " << name << " ได้รับ 1 ดาเมจ! การ์ดที่ตก Damage Zone: " << damage_card.getName() << std::endl;
@@ -515,7 +568,7 @@ void Player::clearGuardianZoneAndMoveToDrop()
     for (const auto &card : guardian_zone)
     {
       std::cout << "[" << card.getName() << "] ";
-      drop_zone.push_back(card); // ย้ายไป Drop Zone
+      drop_zone.push_back(card);
     }
     std::cout << "ถูกย้ายไป Drop Zone." << std::endl;
     guardian_zone.clear();
