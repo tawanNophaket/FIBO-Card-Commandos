@@ -15,6 +15,7 @@ private:
   int shield;                    // ค่าโล่ห์
   std::string skill_description; // คำอธิบายสกิล
   std::string type_role;         // ประเภท/บทบาทของการ์ด เช่น "Starter", "Trigger - Heal"
+  int critical;                  // <<< เพิ่มค่า Critical
 
 public:
   // Constructor
@@ -24,12 +25,13 @@ public:
        int power,
        int shield,
        const std::string &skill_description,
-       const std::string &type_role);
+       const std::string &type_role,
+       int critical); // <<< เพิ่ม critical ใน constructor
 
-  // Destructor (อาจจะไม่จำเป็นต้องทำอะไรเป็นพิเศษในคลาสนี้ แต่เป็น good practice ที่จะมี)
+  // Destructor
   ~Card();
 
-  // Getter methods (เมธอดสำหรับเข้าถึงค่า private member variables)
+  // Getter methods
   std::string getCodeName() const;
   std::string getName() const;
   int getGrade() const;
@@ -37,15 +39,11 @@ public:
   int getShield() const;
   std::string getSkillDescription() const;
   std::string getTypeRole() const;
-
-  // Setter methods (ถ้าต้องการให้แก้ไขค่าได้ภายหลัง)
-  // void setPower(int new_power); // ตัวอย่าง
+  int getCritical() const; // <<< เพิ่ม getter สำหรับ critical
 
   // Member function สำหรับแสดงข้อมูลการ์ด
   void displayInfo() const;
 
-  // Overload a << operator for easy printing of Card objects (optional but useful)
-  // friend function สามารถเข้าถึง private members ของคลาสได้
   friend std::ostream &operator<<(std::ostream &os, const Card &card);
 };
 

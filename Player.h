@@ -45,17 +45,18 @@ private:
   std::vector<Card> drop_zone;
   std::vector<Card> guardian_zone;
 
-  // Helper function to get unit status index from RC slot index
-  size_t getUnitStatusIndexForRC(size_t rc_slot_idx) const
-  {
-    return rc_slot_idx + 1; // +1 เพราะ index 0 คือ VC
-  }
   // Static helper for printing lines, specific to Player display methods
   static void printDisplayLine(char c = '-', int length = 70);
 
 public:
   // Constructor: ใช้ move semantics สำหรับ Deck
   Player(const std::string &player_name, Deck &&player_deck);
+
+  // --- Helper function (ย้ายมา public เพื่อให้ main.cpp หรือฟังก์ชันภายนอกเรียกได้) ---
+  size_t getUnitStatusIndexForRC(size_t rc_slot_idx) const
+  {
+    return rc_slot_idx + 1; // +1 เพราะ index 0 คือ VC
+  }
 
   // --- Setup Phase ---
   bool setupGame(const std::string &starter_code_name, int initial_hand_size = 5);
@@ -72,7 +73,9 @@ public:
   std::optional<Card> getUnitAtStatusIndex(int unit_status_idx) const;
   int getUnitPowerAtStatusIndex(int unit_status_idx, int booster_unit_status_idx = -1, bool for_defense = false) const;
 
-  int performGuardStep(int incoming_attack_power, const std::optional<Card> &target_unit_opt);
+  // --- Guarding ---
+  int addCardToGuardianZoneFromHand(size_t hand_card_index);
+  int getGuardianZoneShieldTotal() const;
 
   // --- Basic Actions (เบื้องต้น) ---
   bool rideFromHand(size_t hand_card_index);
@@ -87,12 +90,12 @@ public:
   // --- Getters ---
   std::string getName() const;
   size_t getHandSize() const;
-  const std::vector<Card> &getHand() const;
+  const std::vector<Card> &getHand() const; // For read-only access to hand
   size_t getDamageCount() const;
   const std::optional<Card> &getVanguard() const;
   const std::array<std::optional<Card>, NUM_REAR_GUARD_CIRCLES> &getRearGuards() const;
-  Deck &getDeck();             // <<< เพิ่มเมธอดนี้ (คืน non-const reference เพื่อให้สามารถเรียก draw())
-  const Deck &getDeck() const; // <<< เพิ่ม const version สำหรับการเรียกจาก const methods (เช่น getSize(), isEmpty())
+  Deck &getDeck();
+  const Deck &getDeck() const;
 
   // --- Game Mechanics ---
   void takeDamage(const Card &damage_card);

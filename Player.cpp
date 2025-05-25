@@ -1,10 +1,10 @@
 // Player.cpp - ไฟล์ Source สำหรับ υλολοποίηση คลาส Player
 #include "Player.h"
 #include <iostream>
-#include <algorithm>
-#include <iomanip>
-#include <sstream>
-#include <limits>
+#include <algorithm> // For std::remove, std::sort (if needed later)
+#include <iomanip>   // For std::setw, std::left
+#include <sstream>   // For std::ostringstream
+#include <limits>    // For std::numeric_limits
 
 // Static helper function definition for Player class (or make it a free function if preferred)
 void Player::printDisplayLine(char c, int length)
@@ -14,9 +14,9 @@ void Player::printDisplayLine(char c, int length)
 
 // Constructor
 Player::Player(const std::string &player_name, Deck &&player_deck)
-    : name(player_name), deck(std::move(player_deck))
+    : name(player_name), deck(std::move(player_deck)) // Use member initializer list
 {
-  unit_is_standing.fill(true);
+  unit_is_standing.fill(true); // Initialize all units to standing
 }
 
 // Helper method to draw cards
@@ -24,14 +24,15 @@ void Player::drawCards(int num_to_draw)
 {
   for (int i = 0; i < num_to_draw; ++i)
   {
-    std::optional<Card> drawn_card = deck.draw(); // เรียก deck.draw() โดยตรง
+    std::optional<Card> drawn_card = deck.draw(); // Call deck.draw() directly
     if (drawn_card.has_value())
     {
       hand.push_back(drawn_card.value());
     }
     else
     {
-      break;
+      // std::cout << name << " ไม่สามารถจั่วการ์ดได้อีกต่อไป (เด็คหมด)" << std::endl;
+      break; // Stop drawing if deck is empty
     }
   }
 }
@@ -42,92 +43,31 @@ bool Player::setupGame(const std::string &starter_code_name, int initial_hand_si
   std::optional<Card> starter_card_opt = deck.removeCardByCodeName(starter_code_name);
   if (!starter_card_opt.has_value())
   {
+    // std::cerr << "Error: ไม่พบ Starter Card '" << starter_code_name << "' ในเด็คของ " << name << std::endl;
     return false;
   }
   vanguard_circle = starter_card_opt.value();
-  unit_is_standing[UNIT_STATUS_VC_IDX] = true;
+  unit_is_standing[UNIT_STATUS_VC_IDX] = true; // Starter is standing
+
   deck.shuffle();
   drawCards(initial_hand_size);
   return true;
 }
 
+// --- Turn Phases ---
 void Player::performStandPhase()
 {
+  // Stand all units
   unit_is_standing.fill(true);
 }
 
 bool Player::performDrawPhase()
 {
   if (deck.isEmpty())
-  { // เรียก deck.isEmpty() โดยตรง
-    return false;
+  {               // Call deck.isEmpty() directly
+    return false; // Cannot draw if deck is empty
   }
   drawCards(1);
-  return true;
-}
-
-bool Player::rideFromHand(size_t hand_card_index)
-{
-  if (hand_card_index >= hand.size())
-  {
-    return false;
-  }
-  Card card_to_ride = hand[hand_card_index];
-  int current_vg_grade = vanguard_circle.has_value() ? vanguard_circle.value().getGrade() : -1;
-  bool can_ride = false;
-  if (!vanguard_circle.has_value())
-  {
-    if (card_to_ride.getGrade() == 0)
-      can_ride = true;
-  }
-  else
-  {
-    if (card_to_ride.getGrade() == current_vg_grade || card_to_ride.getGrade() == current_vg_grade + 1)
-    {
-      can_ride = true;
-    }
-  }
-  if (!can_ride)
-  {
-    return false;
-  }
-  if (vanguard_circle.has_value())
-  {
-    soul.push_back(vanguard_circle.value());
-  }
-  vanguard_circle = card_to_ride;
-  unit_is_standing[UNIT_STATUS_VC_IDX] = true;
-  hand.erase(hand.begin() + hand_card_index);
-  return true;
-}
-
-bool Player::callToRearGuard(size_t hand_card_index, size_t rc_slot_index)
-{
-  if (hand_card_index >= hand.size())
-  {
-    return false;
-  }
-  if (rc_slot_index >= NUM_REAR_GUARD_CIRCLES)
-  {
-    return false;
-  }
-  if (rear_guard_circles[rc_slot_index].has_value())
-  {
-    return false;
-  }
-  Card card_to_call = hand[hand_card_index];
-  if (!vanguard_circle.has_value())
-  {
-    return false;
-  }
-  if (card_to_call.getGrade() > vanguard_circle.value().getGrade())
-  {
-    return false;
-  }
-
-  rear_guard_circles[rc_slot_index] = card_to_call;
-  unit_is_standing[getUnitStatusIndexForRC(rc_slot_index)] = true;
-  hand.erase(hand.begin() + hand_card_index);
   return true;
 }
 
@@ -135,10 +75,12 @@ bool Player::callToRearGuard(size_t hand_card_index, size_t rc_slot_index)
 std::vector<std::pair<int, std::string>> Player::chooseAttacker()
 {
   std::vector<std::pair<int, std::string>> available_attackers;
+  // Check Vanguard
   if (vanguard_circle.has_value() && unit_is_standing[UNIT_STATUS_VC_IDX])
   {
     available_attackers.push_back({UNIT_STATUS_VC_IDX, "VC: " + vanguard_circle.value().getName()});
   }
+  // Check Front Row Rear Guards
   const size_t front_row_rcs[] = {RC_FRONT_LEFT, RC_FRONT_RIGHT};
   for (size_t rc_idx : front_row_rcs)
   {
@@ -148,6 +90,7 @@ std::vector<std::pair<int, std::string>> Player::chooseAttacker()
                                      std::to_string(rc_idx) + ": RC " + rear_guard_circles[rc_idx].value().getName()});
     }
   }
+
   if (available_attackers.empty())
   {
     std::cout << "ไม่มียูนิตที่สามารถโจมตีได้ในขณะนี้ (หรือทั้งหมด Rest อยู่)" << std::endl;
@@ -167,12 +110,15 @@ int Player::chooseBooster(int attacker_unit_status_idx)
 {
   if (attacker_unit_status_idx == -1)
     return -1;
+
   std::optional<Card> attacker_card = getUnitAtStatusIndex(attacker_unit_status_idx);
   if (!attacker_card.has_value())
-    return -1;
+    return -1; // Should not happen if attacker_unit_status_idx is valid
 
   int potential_booster_status_idx = -1;
-  size_t booster_rc_idx = static_cast<size_t>(-1);
+  size_t booster_rc_idx = static_cast<size_t>(-1); // Initialize to an invalid index
+
+  // Determine the RC slot behind the attacker
   if (attacker_unit_status_idx == UNIT_STATUS_VC_IDX)
   {
     booster_rc_idx = RC_BACK_CENTER;
@@ -187,19 +133,19 @@ int Player::chooseBooster(int attacker_unit_status_idx)
   }
 
   if (booster_rc_idx != static_cast<size_t>(-1))
-  {
+  { // If a valid booster position exists
     potential_booster_status_idx = getUnitStatusIndexForRC(booster_rc_idx);
     if (rear_guard_circles[booster_rc_idx].has_value() &&
         unit_is_standing[potential_booster_status_idx] &&
         (rear_guard_circles[booster_rc_idx].value().getGrade() == 0 || rear_guard_circles[booster_rc_idx].value().getGrade() == 1))
-    {
-      std::cout << "คุณสามารถ Boost Attacker (" << attacker_card.value().getName() << ") ด้วย: "
-                << rear_guard_circles[booster_rc_idx].value().getName()
-                << " (G" << rear_guard_circles[booster_rc_idx].value().getGrade() << ") ได้" << std::endl;
+    { // Check if booster exists, is standing, and is G0 or G1
+      // std::cout << "คุณสามารถ Boost Attacker (" << attacker_card.value().getName() << ") ด้วย: "
+      //           << rear_guard_circles[booster_rc_idx].value().getName()
+      //           << " (G" << rear_guard_circles[booster_rc_idx].value().getGrade() << ") ได้" << std::endl;
       return potential_booster_status_idx;
     }
   }
-  return -1;
+  return -1; // No valid booster found
 }
 
 void Player::restUnit(int unit_status_idx)
@@ -209,7 +155,6 @@ void Player::restUnit(int unit_status_idx)
     unit_is_standing[static_cast<size_t>(unit_status_idx)] = false;
   }
 }
-
 bool Player::isUnitStanding(int unit_status_idx) const
 {
   if (unit_status_idx >= 0 && static_cast<size_t>(unit_status_idx) < NUM_FIELD_UNITS)
@@ -225,11 +170,11 @@ std::optional<Card> Player::getUnitAtStatusIndex(int unit_status_idx) const
   {
     return vanguard_circle;
   }
-  else if (unit_status_idx > 0 && static_cast<size_t>(unit_status_idx) <= NUM_REAR_GUARD_CIRCLES + 1)
+  else if (unit_status_idx > 0 && static_cast<size_t>(unit_status_idx - 1) < NUM_REAR_GUARD_CIRCLES) // unit_status_idx is 1-based for RCs
   {
     return rear_guard_circles[static_cast<size_t>(unit_status_idx - 1)];
   }
-  return std::nullopt;
+  return std::nullopt; // Invalid index
 }
 
 int Player::getUnitPowerAtStatusIndex(int unit_status_idx, int booster_unit_status_idx, bool for_defense) const
@@ -246,168 +191,126 @@ int Player::getUnitPowerAtStatusIndex(int unit_status_idx, int booster_unit_stat
     std::optional<Card> booster_opt = getUnitAtStatusIndex(booster_unit_status_idx);
     if (booster_opt.has_value())
     {
-      total_power += booster_opt.value().getPower();
+      total_power += booster_opt.value().getPower(); // Boosters add their power
     }
   }
+  // Add other power modifications here (e.g., skills)
   return total_power;
 }
 
-int Player::performGuardStep(int incoming_attack_power, const std::optional<Card> &target_unit_opt)
+// --- Basic Actions ---
+bool Player::rideFromHand(size_t hand_card_index)
 {
-  std::cout << "\n--- " << name << ": ขั้นตอนการ Guard ---" << std::endl;
-  std::cout << "พลังโจมตีที่เข้ามา: " << incoming_attack_power << std::endl;
-  if (target_unit_opt.has_value())
+  if (hand_card_index >= hand.size())
   {
-    std::cout << "เป้าหมายคือ: " << target_unit_opt.value().getName()
-              << " (Power ปัจจุบัน: " << target_unit_opt.value().getPower() << ")" << std::endl;
+    // std::cout << "Error: Invalid card index for ride." << std::endl;
+    return false;
   }
 
-  int total_shield_value = 0;
-  // char guard_choice = 'y'; // การตัดสินใจจะมาจาก main.cpp
+  Card card_to_ride = hand[hand_card_index];
+  int current_vg_grade = vanguard_circle.has_value() ? vanguard_circle.value().getGrade() : -1; // Handle no VG case
 
-  // Loop การ Guard จะถูกควบคุมจาก main.cpp
-  // ฟังก์ชันนี้อาจจะเปลี่ยนเป็นการรับ index การ์ดจากมือที่จะ Guard ทีละใบ
-  // หรือ main.cpp เรียก displayHand() แล้วรับ input แล้วเรียก player->guardWithCard(index)
-  // เพื่อความง่ายในตอนนี้ จะยังคงโครงสร้างเดิมที่รับ input เองไปก่อน
-  // แต่ควรย้าย loop และ input ไป main.cpp
-
-  // ส่วนนี้จะถูกเรียกซ้ำจาก main.cpp ถ้าผู้เล่นต้องการ Guard เพิ่ม
-  // ดังนั้น ฟังก์ชันนี้ควรจะรับการ์ดที่จะ Guard และ update guardian_zone
-  // แล้วคืน shield รวม *ของ Guardian Zone ปัจจุบัน*
-  // หรืออีกวิธีคือ ให้ main.cpp ส่ง index มา แล้วฟังก์ชันนี้ทำการย้ายการ์ด
-
-  // *** หมายเหตุ: เพื่อให้ main.cpp ควบคุม loop การ Guard ได้ดีขึ้น ***
-  // *** ฟังก์ชันนี้ควรจะเปลี่ยนเป็นการรับ hand_card_index ***
-  // *** แล้วทำการ Guard ด้วยการ์ดนั้น และคืน shield ของการ์ดนั้น ***
-  // *** main.cpp จะวน loop ถามว่าจะ Guard อีกไหม และรวม shield เอง ***
-  // *** แต่เพื่อไม่ให้กระทบ main.cpp มาก จะยังคง loop นี้ไว้ แต่ควรปรับปรุง ***
-
-  // สมมติว่า main.cpp จะเรียกฟังก์ชันนี้ใน loop และฟังก์ชันนี้จะถามว่าจะ Guard ด้วยใบไหน
-  // และคืนค่า shield ที่เพิ่มขึ้นในแต่ละครั้ง หรือ shield รวมของ Guardian Zone
-  // เพื่อให้ง่าย ฟังก์ชันนี้จะถามทีละใบ และ main.cpp จะวนถามว่าจะ Guard อีกไหม
-
-  // สมมติว่าฟังก์ชันนี้ถูกเรียกเพื่อเลือกการ์ด 1 ใบมา Guard
-  if (hand.empty())
-  {
-    std::cout << "ไม่เหลือการ์ดบนมือให้ Guard แล้ว!" << std::endl;
-    return 0; // คืน 0 shield ถ้าไม่มีการ์ด
-  }
-  std::cout << "\nการ์ดบนมือของคุณ:" << std::endl;
-  displayHand(true);
-  std::cout << "Guardian Zone ปัจจุบัน: ";
-  displayGuardianZone();
-
-  int card_idx_to_guard = -1;
-  // การรับ input จะย้ายไปที่ main.cpp
-  // ที่นี่จะสมมติว่า main.cpp ส่ง card_idx_to_guard มา
-  // แต่ในโค้ดนี้ยังไม่ได้แก้ไขแบบนั้น
-  // ดังนั้นส่วนนี้จะยังทำงานไม่ถูกต้อง 100% กับ loop ใน main.cpp
-  // ต้องให้ main.cpp เรียก Player::guardWithCardFromHand(index) แล้ว main.cpp รวม shield เอง
-
-  // *** โค้ดส่วนล่างนี้เป็นเพียง Placeholder สำหรับการ Guard ทีละใบ ***
-  // *** และยังไม่ได้ถูกเรียกใช้อย่างถูกต้องจาก main.cpp ในเวอร์ชันล่าสุด ***
-  // *** main.cpp จะต้องมี loop และรับ input index แล้วเรียกเมธอดใหม่ เช่น Player::addCardToGuardianZone(index) ***
-
-  // ตัวอย่าง: (สมมติว่า main.cpp ส่ง index มา)
-  // if (card_idx_to_guard >= 0 && static_cast<size_t>(card_idx_to_guard) < hand.size()) {
-  //     Card card_for_guard = hand[static_cast<size_t>(card_idx_to_guard)];
-  //     guardian_zone.push_back(card_for_guard);
-  //     total_shield_value += card_for_guard.getShield(); // Shield ของใบที่เพิ่ม
-  //     hand.erase(hand.begin() + static_cast<size_t>(card_idx_to_guard));
-  //     std::cout << "ใช้ '" << card_for_guard.getName() << "' (Shield: " << card_for_guard.getShield()
-  //               << ") ในการ Guard. Shield ที่เพิ่ม: " << card_for_guard.getShield() << std::endl;
-  //     return card_for_guard.getShield(); // คืน shield ของใบนี้
-  // }
-  // return 0; // ถ้าเลือกไม่ถูกต้อง หรือไม่ Guard
-
-  // ** โค้ดด้านบนเป็นแนวคิด แต่เพื่อให้ทำงานกับ main.cpp ปัจจุบัน **
-  // ** main.cpp จะวนลูปเรียก performGuardStep ซึ่งไม่ถูกต้อง **
-  // ** แก้ไข: performGuardStep จะ loop เอง และ main.cpp จะเรียกครั้งเดียว **
-  char continue_guard = 'y';
-  while (continue_guard == 'y' || continue_guard == 'Y')
-  {
-    if (hand.empty())
-    {
-      std::cout << "ไม่มีการ์ดบนมือเหลือให้ Guard" << std::endl;
-      break;
-    }
-    displayHand(true);
-    std::cout << "Guardian Zone ปัจจุบัน: ";
-    displayGuardianZone();
-    std::cout << "Shield รวมปัจจุบัน: " << total_shield_value << std::endl;
-    std::cout << "เลือกการ์ดจากมือเพื่อ Guard (-1 เพื่อหยุด Guard, หรือ 'n' ในคำถามถัดไป): ";
-    std::string s_choice;
-    std::cin >> s_choice;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    int choice_idx = -1;
-    try
-    {
-      choice_idx = std::stoi(s_choice);
-    }
-    catch (...)
-    {
-      choice_idx = -2; /*invalid input*/
-    }
-
-    if (choice_idx == -1)
-      break;
-    if (choice_idx >= 0 && static_cast<size_t>(choice_idx) < hand.size())
-    {
-      Card card_to_guard = hand[static_cast<size_t>(choice_idx)];
-      guardian_zone.push_back(card_to_guard);
-      total_shield_value += card_to_guard.getShield();
-      hand.erase(hand.begin() + static_cast<size_t>(choice_idx));
-      std::cout << "ใช้ '" << card_to_guard.getName() << "' (Shield " << card_to_guard.getShield() << ") Guard. Shield รวม: " << total_shield_value << std::endl;
-    }
-    else
-    {
-      std::cout << "เลือกไม่ถูกต้อง" << std::endl;
-    }
-    if (hand.empty())
-    {
-      std::cout << "ไม่มีการ์ดบนมือเหลือให้ Guard" << std::endl;
-      break;
-    }
-    std::cout << "ต้องการ Guard เพิ่มหรือไม่ (y/n): ";
-    std::cin >> continue_guard;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-  }
-  return total_shield_value;
-}
-
-void Player::displayGuardianZone() const
-{
-  if (guardian_zone.empty())
-  {
-    std::cout << "(ว่าง)";
+  // Ride condition: Grade must be equal to or one greater than current VG's grade
+  // Or if no VG, must be Grade 0
+  bool can_ride = false;
+  if (!vanguard_circle.has_value())
+  { // Initial ride (no current VG)
+    if (card_to_ride.getGrade() == 0)
+      can_ride = true;
   }
   else
-  {
-    for (const auto &card : guardian_zone)
+  { // Normal ride
+    if (card_to_ride.getGrade() == current_vg_grade || card_to_ride.getGrade() == current_vg_grade + 1)
     {
-      std::cout << "[" << card.getName() << " S:" << card.getShield() << "] ";
+      can_ride = true;
     }
   }
-  std::cout << std::endl;
+
+  if (!can_ride)
+  {
+    // std::cout << "Error: Cannot ride " << card_to_ride.getName() << " (G" << card_to_ride.getGrade()
+    //           << ") on current Vanguard (G" << current_vg_grade << ")." << std::endl;
+    return false;
+  }
+
+  // Move current VG to soul (if one exists)
+  if (vanguard_circle.has_value())
+  {
+    soul.push_back(vanguard_circle.value());
+  }
+
+  vanguard_circle = card_to_ride;              // Place new VG
+  unit_is_standing[UNIT_STATUS_VC_IDX] = true; // New VG is standing
+  hand.erase(hand.begin() + hand_card_index);  // Remove card from hand
+
+  // std::cout << name << " rode " << card_to_ride.getName() << "!" << std::endl;
+  return true;
 }
 
-std::string formatCardForDisplay(const std::optional<Card> &card_opt, int width, bool is_standing = true, bool is_vc = false)
+bool Player::callToRearGuard(size_t hand_card_index, size_t rc_slot_index)
+{
+  if (hand_card_index >= hand.size())
+  {
+    // std::cout << "Error: Invalid card index for call." << std::endl;
+    return false;
+  }
+  if (rc_slot_index >= NUM_REAR_GUARD_CIRCLES)
+  {
+    // std::cout << "Error: Invalid RC slot index." << std::endl;
+    return false;
+  }
+  if (rear_guard_circles[rc_slot_index].has_value())
+  {
+    // std::cout << "Error: RC slot " << rc_slot_index << " is already occupied." << std::endl;
+    return false; // Slot is occupied
+  }
+
+  Card card_to_call = hand[hand_card_index];
+
+  // Call condition: Grade must be less than or equal to current VG's grade
+  if (!vanguard_circle.has_value())
+  { // Should not happen if game setup correctly
+    // std::cout << "Error: No Vanguard to determine valid call grade." << std::endl;
+    return false;
+  }
+  if (card_to_call.getGrade() > vanguard_circle.value().getGrade())
+  {
+    // std::cout << "Error: Cannot call " << card_to_call.getName() << " (G" << card_to_call.getGrade()
+    //           << ") - grade is higher than Vanguard (G" << vanguard_circle.value().getGrade() << ")." << std::endl;
+    return false;
+  }
+
+  rear_guard_circles[rc_slot_index] = card_to_call;
+  unit_is_standing[getUnitStatusIndexForRC(rc_slot_index)] = true; // Called unit is standing
+  hand.erase(hand.begin() + hand_card_index);
+
+  // std::cout << name << " called " << card_to_call.getName() << " to RC slot " << rc_slot_index << "." << std::endl;
+  return true;
+}
+
+// --- Information Display ---
+
+// Helper to format card display string (moved from main.cpp for Player class to use)
+std::string formatCardForPlayerDisplay(const std::optional<Card> &card_opt, int width, bool is_standing = true, bool is_vc = false)
 {
   std::ostringstream oss;
   std::string content;
+
   if (card_opt.has_value())
   {
     const Card &card = card_opt.value();
     std::string grade_str = "G" + std::to_string(card.getGrade());
     std::string name_str = card.getName();
-    std::string status_str = is_standing ? "" : " (R)";
+    std::string status_str = is_standing ? "" : " (R)"; // (R) for Rest
     std::string full_text = grade_str + " " + name_str + status_str;
+
+    // Truncate if too long
     if (full_text.length() > static_cast<size_t>(width))
     {
-      int available_width_for_name = width - grade_str.length() - status_str.length() - 1 - 3;
+      int available_width_for_name = width - grade_str.length() - status_str.length() - 1 - 3; // -1 for space, -3 for "..."
       if (available_width_for_name < 1)
         available_width_for_name = 1;
-      name_str = name_str.substr(0, available_width_for_name) + "...";
+      name_str = name_str.substr(0, static_cast<size_t>(available_width_for_name)) + "...";
       content = grade_str + " " + name_str + status_str;
     }
     else
@@ -417,34 +320,39 @@ std::string formatCardForDisplay(const std::optional<Card> &card_opt, int width,
   }
   else
   {
-    content = "[   ว่าง   ]";
+    content = "[   ว่าง   ]"; // Empty slot
   }
+
+  // Centering
   int text_len = 0;
   for (char c : content)
-  {
+  { // Basic length, may not be accurate for all UTF-8
     text_len++;
   }
   int padding = width - text_len;
   int pad_left = padding / 2;
   int pad_right = padding - pad_left;
-  oss << std::string(pad_left, ' ') << content << std::string(pad_right, ' ');
+
+  oss << std::string(static_cast<size_t>(pad_left), ' ') << content << std::string(static_cast<size_t>(pad_right), ' ');
   return oss.str();
 }
 
 void Player::displayField(bool show_opponent_field_for_targeting) const
 {
-  const int card_cell_width = 22;
+  const int card_cell_width = 22; // Width for each card cell in display
   const std::string V_BORDER = "|";
-  const std::string H_BORDER_THIN_SEGMENT = std::string(card_cell_width, '-');
-  const std::string H_BORDER_THICK_SEGMENT = std::string(card_cell_width, '=');
+  const std::string H_BORDER_THIN_SEGMENT = std::string(static_cast<size_t>(card_cell_width), '-');
+  const std::string H_BORDER_THICK_SEGMENT = std::string(static_cast<size_t>(card_cell_width), '=');
   const std::string CORNER = "+";
+
+  // Construct row separators
   std::string row_separator = CORNER;
   for (int i = 0; i < 3; ++i)
-  {
+  { // 3 cells per row
     row_separator += H_BORDER_THIN_SEGMENT + CORNER;
   }
   std::string vc_row_separator_left = CORNER + H_BORDER_THIN_SEGMENT + CORNER;
-  std::string vc_row_separator_center = H_BORDER_THICK_SEGMENT;
+  std::string vc_row_separator_center = H_BORDER_THICK_SEGMENT; // Thicker for VC
   std::string vc_row_separator_right = CORNER + H_BORDER_THIN_SEGMENT + CORNER;
 
   std::cout << "\n<<<<< สนามของ: " << name << " >>>>>" << std::endl;
@@ -454,29 +362,35 @@ void Player::displayField(bool show_opponent_field_for_targeting) const
             << " | โซล: " << std::left << std::setw(2) << soul.size()
             << " | ดรอป: " << std::left << std::setw(2) << drop_zone.size() << std::endl;
   Player::printDisplayLine('~', 70);
+
+  // Front Row
   std::cout << "  แถวหน้า:" << std::endl;
   std::cout << "  " << vc_row_separator_left << vc_row_separator_center << vc_row_separator_right << std::endl;
-  std::cout << "  " << V_BORDER << formatCardForDisplay(rear_guard_circles[RC_FRONT_LEFT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_FRONT_LEFT)])
-            << V_BORDER << formatCardForDisplay(vanguard_circle, card_cell_width, unit_is_standing[UNIT_STATUS_VC_IDX], true)
-            << V_BORDER << formatCardForDisplay(rear_guard_circles[RC_FRONT_RIGHT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_FRONT_RIGHT)])
+  std::cout << "  " << V_BORDER << formatCardForPlayerDisplay(rear_guard_circles[RC_FRONT_LEFT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_FRONT_LEFT)])
+            << V_BORDER << formatCardForPlayerDisplay(vanguard_circle, card_cell_width, unit_is_standing[UNIT_STATUS_VC_IDX], true) // is_vc = true
+            << V_BORDER << formatCardForPlayerDisplay(rear_guard_circles[RC_FRONT_RIGHT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_FRONT_RIGHT)])
             << V_BORDER << std::endl;
-  std::cout << "  " << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << "   (RC FL)"
-            << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << "   (VC)"
-            << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << "   (RC FR)"
+  std::cout << "  " << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << (show_opponent_field_for_targeting ? "   (0: RC FL)" : "   (RC FL)")
+            << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << (show_opponent_field_for_targeting ? "   (VC)" : "   (VC)") // Opponent VC is not targetable with number for now
+            << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << (show_opponent_field_for_targeting ? "   (1: RC FR)" : "   (RC FR)")
             << V_BORDER << std::endl;
   std::cout << "  " << vc_row_separator_left << vc_row_separator_center << vc_row_separator_right << std::endl;
   std::cout << std::endl;
+
+  // Back Row
   std::cout << "  แถวหลัง:" << std::endl;
   std::cout << "  " << row_separator << std::endl;
-  std::cout << "  " << V_BORDER << formatCardForDisplay(rear_guard_circles[RC_BACK_LEFT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_BACK_LEFT)])
-            << V_BORDER << formatCardForDisplay(rear_guard_circles[RC_BACK_CENTER], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_BACK_CENTER)])
-            << V_BORDER << formatCardForDisplay(rear_guard_circles[RC_BACK_RIGHT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_BACK_RIGHT)])
+  std::cout << "  " << V_BORDER << formatCardForPlayerDisplay(rear_guard_circles[RC_BACK_LEFT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_BACK_LEFT)])
+            << V_BORDER << formatCardForPlayerDisplay(rear_guard_circles[RC_BACK_CENTER], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_BACK_CENTER)])
+            << V_BORDER << formatCardForPlayerDisplay(rear_guard_circles[RC_BACK_RIGHT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_BACK_RIGHT)])
             << V_BORDER << std::endl;
-  std::cout << "  " << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << "   (RC BL)"
-            << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << "   (RC BC)"
-            << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << "   (RC BR)"
+  std::cout << "  " << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << (show_opponent_field_for_targeting ? "   (2: RC BL)" : "   (RC BL)")
+            << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << (show_opponent_field_for_targeting ? "   (3: RC BC)" : "   (RC BC)")
+            << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << (show_opponent_field_for_targeting ? "   (4: RC BR)" : "   (RC BR)")
             << V_BORDER << std::endl;
   std::cout << "  " << row_separator << std::endl;
+
+  // Damage Zone
   std::cout << "\nDamage Zone (" << damage_zone.size() << "): ";
   if (damage_zone.empty())
   {
@@ -510,7 +424,7 @@ void Player::displayHand(bool show_details) const
   {
     for (size_t i = 0; i < hand.size(); ++i)
     {
-      std::cout << i << ": " << hand[i];
+      std::cout << i << ": " << hand[i]; // Uses Card's operator<<
       if (show_details)
       {
         std::cout << " (P:" << hand[i].getPower() << " S:" << hand[i].getShield() << ")";
@@ -524,8 +438,10 @@ void Player::displayHand(bool show_details) const
 void Player::displayFullStatus() const
 {
   displayField();
-  displayHand(true);
+  displayHand(true); // Show hand details
+                     // Potentially display soul, drop zone too if needed for debugging/full status
 }
+
 // --- Getters ---
 std::string Player::getName() const { return name; }
 size_t Player::getHandSize() const { return hand.size(); }
@@ -544,12 +460,16 @@ void Player::takeDamage(const Card &damage_card)
   if (getDamageCount() >= 6)
   {
     std::cout << "*** 💀 " << name << " ได้รับ 6 ดาเมจแล้ว! " << name << " แพ้แล้ว! 💀 ***" << std::endl;
+    // Game over logic will be handled in main.cpp
   }
 }
+
 void Player::placeCardIntoSoul(const Card &card)
 {
   soul.push_back(card);
+  // std::cout << "'" << card.getName() << "' ถูกวางลงใน Soul ของ " << name << "." << std::endl;
 }
+
 void Player::discardFromHandToDrop(size_t hand_card_index)
 {
   if (hand_card_index < hand.size())
@@ -560,17 +480,57 @@ void Player::discardFromHandToDrop(size_t hand_card_index)
     std::cout << "🗑️ " << name << " ทิ้งการ์ด '" << discarded_card.getName() << "' จากมือลง Drop Zone." << std::endl;
   }
 }
+
 void Player::clearGuardianZoneAndMoveToDrop()
 {
   if (!guardian_zone.empty())
   {
-    std::cout << "การ์ดใน Guardian Zone (" << name << "): ";
+    // std::cout << "การ์ดใน Guardian Zone (" << name << "): ";
     for (const auto &card : guardian_zone)
     {
-      std::cout << "[" << card.getName() << "] ";
+      // std::cout << "[" << card.getName() << "] ";
       drop_zone.push_back(card);
     }
-    std::cout << "ถูกย้ายไป Drop Zone." << std::endl;
+    // std::cout << "ถูกย้ายไป Drop Zone." << std::endl;
     guardian_zone.clear();
   }
+}
+
+void Player::displayGuardianZone() const
+{
+  if (guardian_zone.empty())
+  {
+    std::cout << "(ว่าง)";
+  }
+  else
+  {
+    for (const auto &card : guardian_zone)
+    {
+      std::cout << "[" << card.getName() << " S:" << card.getShield() << "] ";
+    }
+  }
+  std::cout << std::endl;
+}
+
+int Player::addCardToGuardianZoneFromHand(size_t hand_card_index)
+{
+  if (hand_card_index >= hand.size())
+  {
+    return -1; // Invalid index
+  }
+  Card card_to_guard = hand[hand_card_index];
+  guardian_zone.push_back(card_to_guard);
+  hand.erase(hand.begin() + static_cast<long>(hand_card_index)); // Ensure correct type for erase
+  // std::cout << name << " ใช้ '" << card_to_guard.getName() << "' (Shield: " << card_to_guard.getShield() << ") ในการ Guard." << std::endl;
+  return card_to_guard.getShield();
+}
+
+int Player::getGuardianZoneShieldTotal() const
+{
+  int total_shield = 0;
+  for (const auto &card : guardian_zone)
+  {
+    total_shield += card.getShield();
+  }
+  return total_shield;
 }

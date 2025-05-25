@@ -6,7 +6,8 @@
     "power": 6000,
     "shield": 10000,
     "skill_description": "[AUTO] เมื่อถูก Ride : จั่ว 1",
-    "type_role": "Starter"
+    "type_role": "Starter",
+    "critical": 1
   },
   {
     "code_name": "G0-02",
@@ -15,7 +16,8 @@
     "power": 5000,
     "shield": 5000,
     "skill_description": "[TRIGGER] +10000 P & Heal 1 (ถ้าดาเมจเรา ≥ คู่แข่ง)",
-    "type_role": "Trigger - Heal"
+    "type_role": "Trigger - Heal",
+    "critical": 1
   },
   {
     "code_name": "G0-03",
@@ -24,7 +26,8 @@
     "power": 5000,
     "shield": 5000,
     "skill_description": "[TRIGGER] +10000 P & Draw 1",
-    "type_role": "Trigger - Draw"
+    "type_role": "Trigger - Draw",
+    "critical": 1
   },
   {
     "code_name": "G0-04",
@@ -33,7 +36,8 @@
     "power": 5000,
     "shield": 5000,
     "skill_description": "[TRIGGER] +10000 P & Critical +1",
-    "type_role": "Trigger - Critical"
+    "type_role": "Trigger - Critical",
+    "critical": 1
   },
   {
     "code_name": "G1-01",
@@ -42,7 +46,8 @@
     "power": 8000,
     "shield": 10000,
     "skill_description": "[AUTO] หลัง Boost สำเร็จ → เลือก RC หน้า 1 ใบ +3000 P เทิร์นนี้",
-    "type_role": "Booster"
+    "type_role": "Booster",
+    "critical": 1
   },
   {
     "code_name": "G1-02",
@@ -51,7 +56,8 @@
     "power": 7000,
     "shield": 0,
     "skill_description": "AUTO วาง GC : ทิ้งการ์ด 1 → ยกเลิกการโจมตี นั้น",
-    "type_role": "Sentinel • Perfect Guard"
+    "type_role": "Sentinel • Perfect Guard",
+    "critical": 1
   },
   {
     "code_name": "G1-03",
@@ -60,7 +66,8 @@
     "power": 9000,
     "shield": 5000,
     "skill_description": "[AUTO] เมื่อ Intercept → ยูนิตนี้ +5000 Shield (รวมเป็น 10k)",
-    "type_role": "Interceptor"
+    "type_role": "Interceptor",
+    "critical": 1
   },
   {
     "code_name": "G1-04",
@@ -69,7 +76,8 @@
     "power": 7000,
     "shield": 10000,
     "skill_description": "[AUTO] วาง RC → จั่ว 1 แล้วทิ้ง 1",
-    "type_role": "Draw Engine"
+    "type_role": "Draw Engine",
+    "critical": 1
   },
   {
     "code_name": "G1-05",
@@ -78,7 +86,8 @@
     "power": 8000,
     "shield": 5000,
     "skill_description": "[AUTO] วาง VC/RC → ดู 3 ใบบนเด็ค เลือก 1 เข้ามือ ที่เหลือล่างเด็ค",
-    "type_role": "Searcher"
+    "type_role": "Searcher",
+    "critical": 1
   },
   {
     "code_name": "G2-01",
@@ -87,7 +96,8 @@
     "power": 10000,
     "shield": 5000,
     "skill_description": "[CONT] ถ้าคุณมียูนิตแถวหน้ามากกว่าคู่แข่ง → ยูนิตนี้ +3000 P",
-    "type_role": "Front-Attacker"
+    "type_role": "Front-Attacker",
+    "critical": 1
   },
   {
     "code_name": "G2-02",
@@ -96,7 +106,8 @@
     "power": 10000,
     "shield": 5000,
     "skill_description": "[AUTO] โจมตี Hit VG → จั่ว 1",
-    "type_role": "Recharger"
+    "type_role": "Recharger",
+    "critical": 1
   },
   {
     "code_name": "G2-03",
@@ -105,7 +116,8 @@
     "power": 10000,
     "shield": 5000,
     "skill_description": "[CONT] ถ้า Soul ≥ 3 → ยูนิตนี้ +3000 P",
-    "type_role": "Soul-Boost"
+    "type_role": "Soul-Boost",
+    "critical": 1
   },
   {
     "code_name": "G2-04",
@@ -114,7 +126,8 @@
     "power": 12000,
     "shield": 5000,
     "skill_description": "[AUTO] วาง RC → เลือก RG เกรด 1 ของคู่แข่ง 1 ใบ Retire",
-    "type_role": "Board Control"
+    "type_role": "Board Control",
+    "critical": 1
   },
   {
     "code_name": "G3-01",
@@ -123,7 +136,8 @@
     "power": 13000,
     "shield": 0,
     "skill_description": "[AUTO] เมื่อยูนิตนี้โจมตี → เลือกยูนิตคู่แข่ง 1 ใบ Retire",
-    "type_role": "Field Cleaner"
+    "type_role": "Field Cleaner",
+    "critical": 1
   },
   {
     "code_name": "G3-02",
@@ -132,7 +146,8 @@
     "power": 13000,
     "shield": 0,
     "skill_description": "[AUTO] Ride บน VG → ค้น \"เล้ง\" ≤ 1 ใบเข้ามือ",
-    "type_role": "Sentinel Tutor"
+    "type_role": "Sentinel Tutor",
+    "critical": 1
   },
   {
     "code_name": "G3-03",
@@ -141,7 +156,8 @@
     "power": 13000,
     "shield": 0,
     "skill_description": "AUTO วาง GC → ยูนิตนี้ +10000 Shield; ถ้ากันผ่าน → เลือก RG เรา 1 ใบ +5000 P จนจบเทิร์นถัดไป",
-    "type_role": "Shield Support"
+    "type_role": "Shield Support",
+    "critical": 1
   },
   {
     "code_name": "G3-04",
@@ -150,7 +166,8 @@
     "power": 13000,
     "shield": 0,
     "skill_description": "[CONT] ถ้า Soul ≥ 5 → VG นี้ +1 Critical",
-    "type_role": "Crit Pressure"
+    "type_role": "Crit Pressure",
+    "critical": 1
   },
   {
     "code_name": "G4-01",
@@ -159,6 +176,7 @@
     "power": 15000,
     "shield": 0,
     "skill_description": "[AUTO] เมื่อยูนิตนี้โจมตี VG → Stand ยูนิตแถวหน้าอื่น 2 ใบ & ยูนิตนี้ +1 Critical จนจบ Battle",
-    "type_role": "Finisher"
+    "type_role": "Finisher",
+    "critical": 1
   }
 ]
