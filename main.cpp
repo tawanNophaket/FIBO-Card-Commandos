@@ -169,6 +169,8 @@ int getIntegerInput(const std::string &prompt, Player *player_for_display, int m
         ClearScreen();
         player_for_display->displayField();
         player_for_display->displayHand(true);
+        std::cout << "(กด Enter เพื่อกลับไปเลือก...)" << std::endl;
+        std::cin.get();
         continue;
       }
     }
@@ -193,6 +195,8 @@ int getIntegerInput(const std::string &prompt, Player *player_for_display, int m
     {
       printError("INPUT ERROR: ตัวเลขมีขนาดใหญ่หรือเล็กเกินไป");
     }
+    std::cout << "(กด Enter เพื่อลองใหม่...)" << std::endl;
+    std::cin.get();
   }
 }
 
@@ -223,17 +227,21 @@ char getActionInput(const std::string &prompt, Player *player_for_display, bool 
         ClearScreen();
         player_for_display->displayField();
         player_for_display->displayHand(true);
+        std::cout << "(กด Enter เพื่อกลับไปเลือก...)" << std::endl;
+        std::cin.get();
         continue;
       }
     }
     printError("INPUT ERROR: กรุณาตอบ 'y', 'n', หรือคำสั่ง (h)");
+    std::cout << "(กด Enter เพื่อลองใหม่...)" << std::endl;
+    std::cin.get();
   }
 }
 
 int chooseTargetFromOpponent(Player *attacker, Player *defender)
 {
   ClearScreen();
-  attacker->displayField();
+  // attacker->displayField();
   printSectionHeader("สนามของฝ่ายป้องกัน (" + defender->getName() + ")", '~', false);
   defender->displayField(true);
 
@@ -308,7 +316,7 @@ int main()
   Player *currentPlayer = nullptr;
   Player *opponentPlayer = nullptr;
 
-  int first_player_choice = getIntegerInput("ใครจะเริ่มเล่นก่อน? (1 สำหรับ " + p1_name + ", 2 สำหรับ " + p2_name + "): ", nullptr, 1, 2, false, false);
+  int first_player_choice = getIntegerInput("ใครจะเริ่มเล่นก่อน? (1 สำหรับ " + p1_name + ", 2 สำหรับ " + p2_name + "): ", nullptr, 1, 2, true, false);
   if (first_player_choice == 1)
   {
     currentPlayer = &player1;
@@ -327,19 +335,22 @@ int main()
   int turn_count = 0;
   bool game_over = false;
 
-  while (!game_over && turn_count < 20)
-  {
+  // --- Game Loop ---
+  while (!game_over)
+  { // เปลี่ยนเงื่อนไขเป็น !game_over
     turn_count++;
     ClearScreen();
     printSectionHeader("เทิร์นที่ " + std::to_string(turn_count) + " ของ " + currentPlayer->getName() + " ⚔️", '*');
 
+    // 1. Stand Phase
     currentPlayer->performStandPhase();
     std::cout << "✔️ ยูนิตทั้งหมด Stand แล้ว" << std::endl;
 
+    // 2. Draw Phase
     if (!currentPlayer->performDrawPhase())
     {
       ClearScreen();
-      printBoxedMessage("GAME OVER: " + currentPlayer->getName() + " แพ้เพราะจั่วการ์ดไม่ได้! 💀", '!');
+      printBoxedMessage("GAME OVER: " + currentPlayer->getName() + " แพ้เพราะเด็คหมดและจั่วการ์ดไม่ได้! 💀", '!');
       game_over = true;
       break;
     }
@@ -348,6 +359,7 @@ int main()
     std::cout << "(กด Enter เพื่อเข้า Ride Phase...)" << std::endl;
     std::cin.get();
 
+    // 3. Ride Phase
     ClearScreen();
     printSectionHeader(currentPlayer->getName() + ": RIDE PHASE 🏍️", '-');
     bool ride_successful_this_turn = false;
@@ -362,7 +374,11 @@ int main()
 
       if (currentPlayer->getHandSize() == 0)
       {
+        ClearScreen();
+        currentPlayer->displayField();
         std::cout << "ไม่มีการ์ดบนมือให้ Ride" << std::endl;
+        std::cout << "(กด Enter เพื่อดำเนินการต่อ...)" << std::endl;
+        std::cin.get();
         break;
       }
 
@@ -387,18 +403,24 @@ int main()
         printError("RIDE FAILED: ไม่สามารถ Ride การ์ดที่เลือกได้");
         std::cout << "(กด Enter เพื่อลองใหม่ หรือเลือกยกเลิก...)" << std::endl;
         std::cin.get();
+        ClearScreen();
       }
     }
     std::cout << "(กด Enter เพื่อเข้า Main Phase...)" << std::endl;
     std::cin.get();
 
+    // 4. Main Phase (Call Units)
     ClearScreen();
     printSectionHeader(currentPlayer->getName() + ": MAIN PHASE (Call Units) 🃏", '-');
     while (true)
     {
       if (currentPlayer->getHandSize() == 0)
       {
+        ClearScreen();
+        currentPlayer->displayField();
         std::cout << "ไม่มีการ์ดบนมือให้ Call แล้ว" << std::endl;
+        std::cout << "(กด Enter เพื่อดำเนินการต่อ...)" << std::endl;
+        std::cin.get();
         break;
       }
       char call_choice_char = getActionInput("คุณต้องการ Call ยูนิตหรือไม่? (y/n): ", currentPlayer, false);
@@ -418,8 +440,10 @@ int main()
         continue;
       }
 
+      ClearScreen();
+      currentPlayer->displayField();
       std::cout << "เลือกตำแหน่ง RC (0:FL, 1:FR, 2:BL, 3:BC, 4:BR): ";
-      int rc_idx_call = getIntegerInput("ใส่หมายเลขช่อง RC: ", currentPlayer, 0, NUM_REAR_GUARD_CIRCLES - 1, true);
+      int rc_idx_call = getIntegerInput("ใส่หมายเลขช่อง RC: ", nullptr, 0, NUM_REAR_GUARD_CIRCLES - 1, false, false);
       if (currentPlayer->callToRearGuard(static_cast<size_t>(card_idx_call), static_cast<size_t>(rc_idx_call)))
       {
         ClearScreen();
@@ -435,10 +459,13 @@ int main()
     std::cout << "(กด Enter เพื่อเข้า Battle Phase...)" << std::endl;
     std::cin.get();
 
+    // 5. Battle Phase
     ClearScreen();
     printSectionHeader(currentPlayer->getName() + ": BATTLE PHASE 💥", '-');
     currentPlayer->clearGuardianZoneAndMoveToDrop();
     opponentPlayer->clearGuardianZoneAndMoveToDrop();
+    currentPlayer->resetBattleBuffs();
+    opponentPlayer->resetBattleBuffs();
 
     char attack_again_choice = 'y';
     while (attack_again_choice == 'y' && !game_over)
@@ -506,9 +533,8 @@ int main()
         }
       }
 
-      int final_attacker_power = currentPlayer->getUnitPowerAtStatusIndex(attacker_status_idx, booster_status_idx);
-      int final_attacker_crit = attacker_card_opt.value().getCritical();
-      TriggerOutput drive_trigger_effects;
+      int final_attacker_power = currentPlayer->getUnitPowerAtStatusIndex(attacker_status_idx, booster_status_idx, false);
+      int final_attacker_crit = currentPlayer->getUnitCriticalAtStatusIndex(attacker_status_idx);
 
       if (attacker_status_idx == UNIT_STATUS_VC_IDX)
       {
@@ -516,9 +542,9 @@ int main()
         currentPlayer->displayField();
         printSectionHeader(currentPlayer->getName() + " ทำการ DRIVE CHECK 💎", '~');
         int num_drives = (attacker_card_opt.value().getGrade() >= 3) ? 2 : 1;
-        drive_trigger_effects = currentPlayer->performDriveCheck(num_drives, opponentPlayer);
-        final_attacker_power += drive_trigger_effects.extra_power;
-        final_attacker_crit += drive_trigger_effects.extra_crit;
+        currentPlayer->performDriveCheck(num_drives, opponentPlayer, attacker_status_idx);
+        final_attacker_power = currentPlayer->getUnitPowerAtStatusIndex(attacker_status_idx, booster_status_idx, false);
+        final_attacker_crit = currentPlayer->getUnitCriticalAtStatusIndex(attacker_status_idx);
         std::cout << "(กด Enter เพื่อให้ฝ่ายตรงข้ามป้องกัน...)" << std::endl;
         std::cin.get();
       }
@@ -528,28 +554,35 @@ int main()
       std::cin.get();
 
       ClearScreen();
-      std::cout << "\n--- " << opponentPlayer->getName() << " เตรียมป้องกัน ---" << std::endl;
+      std::cout << "\n🛡️ --- " << opponentPlayer->getName() << " เตรียมป้องกัน --- 🛡️" << std::endl;
       opponentPlayer->displayField(true);
-      std::cout << "พลังโจมตีที่เข้ามา: " << final_attacker_power << " (Critical: " << final_attacker_crit << ")" << std::endl;
-      std::cout << "เป้าหมายคือ: " << target_card_opt.value().getName()
-                << " (Power ปัจจุบัน: " << opponentPlayer->getUnitPowerAtStatusIndex(target_status_idx, -1, true) << ")" << std::endl;
+      std::cout << "⚔️ พลังโจมตีที่เข้ามา: " << final_attacker_power << " (Critical: " << final_attacker_crit << ")" << std::endl;
+      int opponent_target_base_power = opponentPlayer->getUnitPowerAtStatusIndex(target_status_idx, -1, true);
+      std::cout << "🎯 เป้าหมายคือ: " << target_card_opt.value().getName()
+                << " (Power ปัจจุบัน: " << opponent_target_base_power << ")" << std::endl;
 
       int total_shield_from_guard = 0;
       char wants_to_guard_choice = getActionInput("คุณ (" + opponentPlayer->getName() + ") ต้องการ Guard หรือไม่? (y/n): ", opponentPlayer, false);
       if (wants_to_guard_choice == 'y')
       {
-        total_shield_from_guard = opponentPlayer->performGuardStep(final_attacker_power, target_card_opt);
+        total_shield_from_guard = opponentPlayer->performGuardStep(final_attacker_power, target_card_opt, currentPlayer);
       }
 
-      int opponent_target_base_power = opponentPlayer->getUnitPowerAtStatusIndex(target_status_idx, -1, true);
-      int opponent_total_defense_power = opponent_target_base_power + total_shield_from_guard;
+      bool perfect_guarded = (total_shield_from_guard == 999999);
+
+      int opponent_total_defense_power = opponent_target_base_power + (perfect_guarded ? 0 : total_shield_from_guard);
       ClearScreen();
       printSectionHeader("ผลการต่อสู้", '=');
       std::cout << currentPlayer->getName() << " (" << attacker_card_opt.value().getName() << ") Power: " << final_attacker_power << " Crit: " << final_attacker_crit << std::endl;
       std::cout << opponentPlayer->getName() << " (" << target_card_opt.value().getName() << ") Defense Power (รวม Guard): " << opponent_total_defense_power << std::endl;
 
       bool is_hit = false;
-      if (final_attacker_power >= opponent_total_defense_power)
+      if (perfect_guarded)
+      {
+        printBoxedMessage("🛡️💥 PERFECT GUARD!! การโจมตีถูกยกเลิก! 💥🛡️", '!');
+        is_hit = false;
+      }
+      else if (final_attacker_power >= opponent_total_defense_power)
       {
         printBoxedMessage("⚔️💥 การโจมตี HIT! 💥⚔️", '!');
         is_hit = true;
@@ -571,7 +604,7 @@ int main()
           opponentPlayer->displayField();
           std::cout << "Damage Check ครั้งที่ " << (i + 1) << "/" << final_attacker_crit << std::endl;
           if (opponentPlayer->getDeck().isEmpty())
-          {
+          { // ตรวจสอบ Deck Out ก่อนจั่ว
             ClearScreen();
             printBoxedMessage("GAME OVER: " + opponentPlayer->getName() + " แพ้เพราะไม่สามารถทำ Damage Check ได้ (เด็คหมด)! 💀", '!');
             game_over = true;
@@ -584,10 +617,10 @@ int main()
             std::cout << "เปิดได้: " << actual_damage_card << std::endl;
             opponentPlayer->takeDamage(actual_damage_card);
 
-            TriggerOutput dmg_trigger_effects = opponentPlayer->handleDamageCheckTrigger(actual_damage_card, currentPlayer);
-            if (dmg_trigger_effects.extra_power > 0)
+            if (actual_damage_card.getTypeRole().find("Trigger") != std::string::npos)
             {
-              std::cout << "ผลจาก Damage Trigger: " << opponentPlayer->getName() << " ได้รับ + " << dmg_trigger_effects.extra_power << " Power (ชั่วคราว ให้ Vanguard)" << std::endl;
+              int defending_vg_idx = UNIT_STATUS_VC_IDX;
+              opponentPlayer->applyTriggerEffect(actual_damage_card, false, currentPlayer, defending_vg_idx);
             }
 
             opponentPlayer->displayField();
@@ -620,14 +653,19 @@ int main()
       currentPlayer->displayField();
       attack_again_choice = getActionInput("\nคุณ (" + currentPlayer->getName() + ") ต้องการโจมตีอีกครั้งหรือไม่? (y/n): ", currentPlayer, false);
     }
-    std::cout << "จบ Battle Phase ของ " << currentPlayer->getName() << std::endl;
-    std::cout << "(กด Enter เพื่อดำเนินการต่อ...)" << std::endl;
-    std::cin.get();
+    if (!game_over)
+    { // ถ้าเกมยังไม่จบจาก Battle Phase
+      std::cout << "จบ Battle Phase ของ " << currentPlayer->getName() << std::endl;
+      std::cout << "(กด Enter เพื่อดำเนินการต่อ...)" << std::endl;
+      std::cin.get();
+    }
 
     ClearScreen();
     printSectionHeader(currentPlayer->getName() + ": END PHASE 🌙", '-');
     currentPlayer->clearGuardianZoneAndMoveToDrop();
     opponentPlayer->clearGuardianZoneAndMoveToDrop();
+    currentPlayer->resetBattleBuffs();
+    opponentPlayer->resetBattleBuffs();
     std::cout << "(Placeholder: สกิลจบเทิร์น, ล้างสถานะชั่วคราว)" << std::endl;
 
     printSectionHeader("เทิร์นของ " + currentPlayer->getName() + " สิ้นสุด", '*');
@@ -636,6 +674,7 @@ int main()
     std::cout << "(กด Enter เพื่อให้ผู้เล่นถัดไปเริ่มเทิร์น...)" << std::endl;
     std::cin.get();
 
+    // ตรวจสอบเงื่อนไขแพ้หลังจบเทิร์น (เผื่อมีผลจากสกิล End Phase ในอนาคต)
     if (currentPlayer->getDamageCount() >= 6)
     {
       game_over = true;
@@ -644,6 +683,8 @@ int main()
     {
       game_over = true;
     }
+    // การตรวจสอบ Deck out ควรจะเกิดใน Draw Phase หรือเมื่อมีการจั่วจริงๆ
+
     if (game_over)
       break;
 
@@ -663,20 +704,41 @@ int main()
   printSectionHeader("🏁 GAME END 🏁", '#');
   if (game_over)
   {
-    if (player1.getDamageCount() >= 6 && player2.getDamageCount() < 6)
-      printBoxedMessage(player2.getName() + " เป็นผู้ชนะ! 🎉", '+');
-    else if (player2.getDamageCount() >= 6 && player1.getDamageCount() < 6)
-      printBoxedMessage(player1.getName() + " เป็นผู้ชนะ! 🎉", '+');
-    else if (player1.getDeck().isEmpty() && !player2.getDeck().isEmpty())
-      printBoxedMessage(player2.getName() + " เป็นผู้ชนะ! (เนื่องจาก " + player1.getName() + " เด็คหมด) 🎉", '+');
-    else if (player2.getDeck().isEmpty() && !player1.getDeck().isEmpty())
-      printBoxedMessage(player1.getName() + " เป็นผู้ชนะ! (เนื่องจาก " + player2.getName() + " เด็คหมด) 🎉", '+');
+    Player *winner = nullptr;
+    Player *loser = nullptr;
+
+    if (player1.getDamageCount() >= 6)
+    {
+      loser = &player1;
+      winner = &player2;
+    }
+    else if (player2.getDamageCount() >= 6)
+    {
+      loser = &player2;
+      winner = &player1;
+    }
+    // ตรวจสอบ Deck Out ให้แม่นยำขึ้น: ถ้าผู้เล่นคนปัจจุบันจั่วไม่ได้ใน Draw Phase ของเขา
+    else if (currentPlayer->getDeck().isEmpty() && !currentPlayer->performDrawPhase())
+    { // สมมติว่า performDrawPhase คืน false ถ้าจั่วไม่ได้
+      loser = currentPlayer;
+      winner = opponentPlayer;
+    }
+
+    if (winner && loser)
+    {
+      printBoxedMessage(winner->getName() + " เป็นผู้ชนะ! (เนื่องจาก " + loser->getName() +
+                            (loser->getDamageCount() >= 6 ? " มี 6 ดาเมจ" : " เด็คหมด") + ") 🎉",
+                        '+');
+    }
     else
+    {
+      // กรณีนี้อาจจะเกิดถ้า loop จบเพราะ turn_count < 20 โดยยังไม่มีใครแพ้
       printBoxedMessage("เกมจบลง! (อาจจะเสมอ หรือเงื่อนไขอื่นๆ)", '*');
+    }
   }
   else
   {
-    std::cout << "จบการจำลอง " << turn_count << " เทิร์น" << std::endl;
+    std::cout << "จบการจำลอง " << turn_count << " เทิร์น (ยังไม่มีผู้ชนะ)" << std::endl;
   }
 
   std::cout << "\nขอบคุณที่เล่น FIBO Card Commandos!" << std::endl;

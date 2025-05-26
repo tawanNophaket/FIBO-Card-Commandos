@@ -30,10 +30,9 @@ const int NUM_FIELD_UNITS = 1 + NUM_REAR_GUARD_CIRCLES;
 // Struct สำหรับเก็บผลลัพธ์จาก Trigger
 struct TriggerOutput
 {
-  int extra_power = 0;
-  int extra_crit = 0;
-  bool card_drawn = false;
-  bool damage_healed = false;
+  int power_to_chosen_unit = 0;    // Power ที่จะให้ยูนิตที่ผู้เล่นเลือก (อาจจะเป็น Attacker หรือ Vanguard)
+  int crit_to_chosen_unit = 0;     // Critical ที่จะให้ยูนิตที่ผู้เล่นเลือก (สำหรับ Drive Check)
+  int chosen_unit_status_idx = -1; // Index ของยูนิตที่รับผล Power/Crit
 };
 
 class Player
@@ -52,8 +51,12 @@ private:
   std::vector<Card> drop_zone;
   std::vector<Card> guardian_zone;
 
+  // Buff ชั่วคราวสำหรับ Battle ปัจจุบันของแต่ละยูนิตในสนาม
+  std::array<int, NUM_FIELD_UNITS> current_battle_power_buffs;
+  std::array<int, NUM_FIELD_UNITS> current_battle_crit_buffs;
+
   static void printDisplayLine(char c = '-', int length = 70);
-  void drawCards(int num_to_draw); // อยู่ใน private ถูกต้องแล้ว
+  void drawCards(int num_to_draw);
 
 public:
   Player(const std::string &player_name, Deck &&player_deck);
@@ -73,18 +76,20 @@ public:
   bool isUnitStanding(int unit_status_idx) const;
   std::optional<Card> getUnitAtStatusIndex(int unit_status_idx) const;
   int getUnitPowerAtStatusIndex(int unit_status_idx, int booster_unit_status_idx = -1, bool for_defense = false) const;
+  int getUnitCriticalAtStatusIndex(int unit_status_idx) const;
 
-  TriggerOutput performDriveCheck(int num_drives, Player *opponent_for_heal_check);
-  TriggerOutput handleDamageCheckTrigger(const Card &damage_card, Player *opponent_for_heal_check);
-  int chooseUnitForTriggerEffect(const std::string &trigger_effect_description);
+  // --- Trigger Handling ---
+  // unit_for_power_crit_idx: คือ unit status index ของยูนิตที่ควรจะได้รับ Power/Crit (เช่น Attacking VG, หรือ Defending VG)
+  TriggerOutput applyTriggerEffect(const Card &trigger_card, bool is_drive_check, Player *opponent_for_heal_check, int unit_for_power_crit_idx);
+  TriggerOutput performDriveCheck(int num_drives, Player *opponent_for_heal_check, int attacking_vg_idx);
+  int chooseUnitForTriggerEffect(const std::string &trigger_effect_description, bool can_choose_any_unit = true);
   bool healOneDamage();
+  void resetBattleBuffs();
 
-  // --- Guarding Methods ---
-  // เมธอดนี้จะถูกเรียกจาก main.cpp และจะ loop ภายในเพื่อให้ผู้เล่นเลือกการ์ด Guard
-  int performGuardStep(int incoming_attack_power, const std::optional<Card> &target_unit_opt);
-  // เมธอด helper สำหรับเพิ่มการ์ด 1 ใบจากมือไป Guardian Zone และคืนค่า shield
   int addCardToGuardianZoneFromHand(size_t hand_card_index);
   int getGuardianZoneShieldTotal() const;
+  // performGuardStep จะคืนค่า Shield รวมที่ได้จากการ Guard และ Intercept ทั้งหมด
+  int performGuardStep(int incoming_attack_power, const std::optional<Card> &target_unit_opt, Player *attacker); // เพิ่ม attacker เข้ามาเผื่อต้องใช้
 
   bool rideFromHand(size_t hand_card_index);
   bool callToRearGuard(size_t hand_card_index, size_t rc_slot_index);

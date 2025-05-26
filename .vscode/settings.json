@@ -61,6 +61,7 @@
     "typeinfo": "cpp",
     "valarray": "cpp",
     "variant": "cpp",
-    "chrono": "cpp"
+    "chrono": "cpp",
+    "cstdarg": "cpp"
   }
 }
