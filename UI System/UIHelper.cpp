@@ -1,6 +1,7 @@
 // UIHelper.cpp - การดำเนินการของฟังก์ชันช่วยเหลือสำหรับการแสดงผล
 // ไฟล์นี้มีฟังก์ชันสำหรับจัดการการแสดงผลต่างๆ เช่น การล้างหน้าจอ การวาดกรอบ และการแสดงผลพิเศษ
 #include "UIHelper.h"
+#include "Player.h"
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -237,7 +238,7 @@ void UIHelper::PrintQuickStatus(const string &player_name, int hand_size, int de
   cout << Colors::BRIGHT_CYAN << Icons::PLAYER << " " << player_name << Colors::RESET;
   cout << " | " << Colors::YELLOW << Icons::HAND << " " << hand_size;
   cout << " | " << Colors::BLUE << Icons::DECK << " " << deck_size;
-  cout << " | " << Colors::RED << Icons::DAMAGE << " " << damage_count << "/6";
+  cout << " | " << Colors::RED << Icons::DAMAGE << " " << damage_count << "/" << Player::MAX_DAMAGE;
   cout << " | " << Colors::MAGENTA << Icons::SOUL << " " << soul_count;
   cout << " | " << Colors::BRIGHT_BLACK << Icons::DROP << " " << drop_count << Colors::RESET << endl;
   PrintHorizontalLine("─", 70, Colors::BRIGHT_BLACK);

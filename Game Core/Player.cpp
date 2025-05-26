@@ -749,7 +749,7 @@ void Player::displayField(bool show_opponent_field_for_targeting) const
   std::cout << "  " << V_BORDER << formatCardForDisplayImproved(rear_guard_circles[RC_FRONT_LEFT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_FRONT_LEFT)])
             << V_BORDER << formatCardForDisplayImproved(vanguard_circle, card_cell_width, unit_is_standing[UNIT_STATUS_VC_IDX])
             << V_BORDER << formatCardForDisplayImproved(rear_guard_circles[RC_FRONT_RIGHT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_FRONT_RIGHT)])
-            << V_BORDER << " " << Colors::RED << Icons::DAMAGE << " Damage: " << Colors::BOLD << damage_zone.size() << "/6" << Colors::RESET << std::endl;
+            << V_BORDER << " " << Colors::RED << Icons::DAMAGE << " Damage: " << Colors::BOLD << damage_zone.size() << "/" << MAX_DAMAGE << Colors::RESET << std::endl;
 
   // Front Row Labels
   std::cout << "  " << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ')
@@ -860,10 +860,10 @@ void Player::takeDamage(const Card &damage_card)
   std::cout << Colors::BRIGHT_RED << Icons::DAMAGE << " " << name << " ได้รับ 1 ดาเมจ! " << Colors::RESET
             << "การ์ดที่ตก Damage Zone: " << UIHelper::FormatCard(damage_card.getName(), damage_card.getGrade()) << std::endl;
   damage_zone.push_back(damage_card);
-  if (getDamageCount() >= 6)
+  if (getDamageCount() >= MAX_DAMAGE)
   {
     std::cout << Colors::BRIGHT_RED << Colors::BOLD << Icons::SKULL << " " << name
-              << " ได้รับ 6 ดาเมจแล้ว! " << name << " แพ้แล้ว! " << Icons::SKULL
+              << " ได้รับ " << MAX_DAMAGE << " ดาเมจแล้ว! " << name << " แพ้แล้ว! " << Icons::SKULL
               << Colors::RESET << std::endl;
     // Potentially add game over logic here or set a flag
   }

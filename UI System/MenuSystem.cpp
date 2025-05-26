@@ -449,7 +449,7 @@ void MenuSystem::ShowGameHelp(const string &current_phase)
   cout << "[q] - ออกจากเกม\n\n";
 
   cout << Colors::BRIGHT_YELLOW << "🎯 วัตถุประสงค์:" << Colors::RESET << "\n";
-  cout << "• ทำดาเมจใส่คู่แข่งครบ 6 แต้ม\n";
+  cout << "• ทำดาเมจใส่คู่แข่งครบ " << Player::MAX_DAMAGE << " แต้ม\n";
   cout << "• หรือทำให้เด็คของคู่แข่งหมด\n\n";
 
   cout << Colors::BRIGHT_GREEN << "⚔️ การต่อสู้:" << Colors::RESET << "\n";
@@ -460,9 +460,9 @@ void MenuSystem::ShowGameHelp(const string &current_phase)
 
   if (!current_phase.empty())
   {
+    cout << Colors::BRIGHT_MAGENTA << "[" << current_phase << "]" << Colors::RESET << "\n";
     ShowPhaseHelp(current_phase);
   }
-
   WaitForKeyPress();
 }
 
@@ -518,9 +518,9 @@ void MenuSystem::ShowGameOverScreen(Player *winner, Player *loser, const string 
   // Show final stats
   cout << Colors::BRIGHT_YELLOW << "📊 สถิติสุดท้าย:" << Colors::RESET << "\n";
   cout << winner->getName() << " - ดาเมจ: " << winner->getDamageCount()
-       << "/6, เด็ค: " << winner->getDeck().getSize() << " ใบ\n";
+       << "/" << Player::MAX_DAMAGE << ", เด็ค: " << winner->getDeck().getSize() << " ใบ\n";
   cout << loser->getName() << " - ดาเมจ: " << loser->getDamageCount()
-       << "/6, เด็ค: " << loser->getDeck().getSize() << " ใบ\n\n";
+       << "/" << Player::MAX_DAMAGE << ", เด็ค: " << loser->getDeck().getSize() << " ใบ\n\n";
 
   UIHelper::PrintBox("ขอบคุณที่เล่น FIBO Card Commandos!", "THANK YOU",
                      Colors::BRIGHT_MAGENTA, Colors::BRIGHT_WHITE);

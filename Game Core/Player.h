@@ -44,6 +44,10 @@ struct TriggerOutput
 // คลาส Player - จัดการข้อมูลและการกระทำของผู้เล่น
 class Player
 {
+public:
+  // --- ค่าคงที่สำหรับเงื่อนไขการชนะ ---
+  static constexpr int MAX_DAMAGE = 2; // จำนวนดาเมจสูงสุดก่อนแพ้ (ปรับจาก 6 เป็น 2)
+
 private:
   // ข้อมูลพื้นฐานของผู้เล่น
   std::string name; // ชื่อผู้เล่น

@@ -424,10 +424,10 @@ bool performBattlePhase(Player *current_player, Player *opponent_player, bool &g
             }
 
             opponent_player->displayField();
-            if (opponent_player->getDamageCount() >= 6)
+            if (opponent_player->getDamageCount() >= Player::MAX_DAMAGE)
             {
               MenuSystem::ShowGameOverScreen(current_player, opponent_player,
-                                             opponent_player->getName() + " ได้รับ 6 ดาเมจ");
+                                             opponent_player->getName() + " ได้รับ " + std::to_string(Player::MAX_DAMAGE) + " ดาเมจ");
               game_over = true;
               break;
             }
@@ -579,11 +579,11 @@ int main()
     opponentPlayer->clearGuardianZoneAndMoveToDrop();
 
     // ตรวจสอบเงื่อนไขการชนะ
-    if (currentPlayer->getDamageCount() >= 6 || opponentPlayer->getDamageCount() >= 6)
+    if (currentPlayer->getDamageCount() >= Player::MAX_DAMAGE || opponentPlayer->getDamageCount() >= Player::MAX_DAMAGE)
     {
-      Player *winner = (currentPlayer->getDamageCount() < 6) ? currentPlayer : opponentPlayer;
-      Player *loser = (currentPlayer->getDamageCount() >= 6) ? currentPlayer : opponentPlayer;
-      MenuSystem::ShowGameOverScreen(winner, loser, "ดาเมจครบ 6 แต้ม");
+      Player *winner = (currentPlayer->getDamageCount() < Player::MAX_DAMAGE) ? currentPlayer : opponentPlayer;
+      Player *loser = (currentPlayer->getDamageCount() >= Player::MAX_DAMAGE) ? currentPlayer : opponentPlayer;
+      MenuSystem::ShowGameOverScreen(winner, loser, "ดาเมจครบ " + std::to_string(Player::MAX_DAMAGE) + " แต้ม");
       game_over = true;
       break;
     }
