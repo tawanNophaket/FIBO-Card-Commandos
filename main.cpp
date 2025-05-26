@@ -310,12 +310,28 @@ int main()
   Player player1(p1_name, Deck(full_card_list, deck_recipe_v1_3));
   Player player2(p2_name, Deck(full_card_list, deck_recipe_v1_3));
 
+  // --- Mulligan Phase ---
+  ClearScreen();
+  printSectionHeader("MULLIGAN PHASE", '~');
+  std::cout << player1.getName() << ", ตาคุณ Mulligan:" << std::endl;
+  player1.performMulligan();
+  std::cout << "(กด Enter เมื่อ " << player1.getName() << " Mulligan เสร็จ...)" << std::endl;
+  std::cin.get();
+  ClearScreen();
+
+  std::cout << player2.getName() << ", ตาคุณ Mulligan:" << std::endl;
+  player2.performMulligan();
+  std::cout << "(กด Enter เมื่อ " << player2.getName() << " Mulligan เสร็จ...)" << std::endl;
+  std::cin.get();
+  ClearScreen();
+
   player1.setupGame("G0-01");
   player2.setupGame("G0-01");
 
   Player *currentPlayer = nullptr;
   Player *opponentPlayer = nullptr;
 
+  printSectionHeader("เลือกผู้เล่นเริ่มก่อน", '~');
   int first_player_choice = getIntegerInput("ใครจะเริ่มเล่นก่อน? (1 สำหรับ " + p1_name + ", 2 สำหรับ " + p2_name + "): ", nullptr, 1, 2, true, false);
   if (first_player_choice == 1)
   {
@@ -337,7 +353,7 @@ int main()
 
   // --- Game Loop ---
   while (!game_over)
-  { // เปลี่ยนเงื่อนไขเป็น !game_over
+  {
     turn_count++;
     ClearScreen();
     printSectionHeader("เทิร์นที่ " + std::to_string(turn_count) + " ของ " + currentPlayer->getName() + " ⚔️", '*');
@@ -542,7 +558,9 @@ int main()
         currentPlayer->displayField();
         printSectionHeader(currentPlayer->getName() + " ทำการ DRIVE CHECK 💎", '~');
         int num_drives = (attacker_card_opt.value().getGrade() >= 3) ? 2 : 1;
-        currentPlayer->performDriveCheck(num_drives, opponentPlayer, attacker_status_idx);
+        TriggerOutput drive_effects = currentPlayer->performDriveCheck(num_drives, opponentPlayer, attacker_status_idx);
+        // Power และ Crit ที่ได้จาก Drive Trigger จะถูก update ใน current_battle_buffs โดย performDriveCheck/applyTriggerEffect
+        // ดังนั้น เราดึงค่าล่าสุดอีกครั้ง
         final_attacker_power = currentPlayer->getUnitPowerAtStatusIndex(attacker_status_idx, booster_status_idx, false);
         final_attacker_crit = currentPlayer->getUnitCriticalAtStatusIndex(attacker_status_idx);
         std::cout << "(กด Enter เพื่อให้ฝ่ายตรงข้ามป้องกัน...)" << std::endl;
@@ -561,23 +579,17 @@ int main()
       std::cout << "🎯 เป้าหมายคือ: " << target_card_opt.value().getName()
                 << " (Power ปัจจุบัน: " << opponent_target_base_power << ")" << std::endl;
 
-      int total_shield_from_guard = 0;
-      char wants_to_guard_choice = getActionInput("คุณ (" + opponentPlayer->getName() + ") ต้องการ Guard หรือไม่? (y/n): ", opponentPlayer, false);
-      if (wants_to_guard_choice == 'y')
-      {
-        total_shield_from_guard = opponentPlayer->performGuardStep(final_attacker_power, target_card_opt, currentPlayer);
-      }
+      bool pg_activated_by_opponent = false; // Flag สำหรับ Perfect Guard
+      int total_shield_from_guard = opponentPlayer->performGuardStep(final_attacker_power, target_card_opt, currentPlayer, pg_activated_by_opponent);
 
-      bool perfect_guarded = (total_shield_from_guard == 999999);
-
-      int opponent_total_defense_power = opponent_target_base_power + (perfect_guarded ? 0 : total_shield_from_guard);
+      int opponent_total_defense_power = opponent_target_base_power + (pg_activated_by_opponent ? 0 : total_shield_from_guard);
       ClearScreen();
       printSectionHeader("ผลการต่อสู้", '=');
       std::cout << currentPlayer->getName() << " (" << attacker_card_opt.value().getName() << ") Power: " << final_attacker_power << " Crit: " << final_attacker_crit << std::endl;
       std::cout << opponentPlayer->getName() << " (" << target_card_opt.value().getName() << ") Defense Power (รวม Guard): " << opponent_total_defense_power << std::endl;
 
       bool is_hit = false;
-      if (perfect_guarded)
+      if (pg_activated_by_opponent)
       {
         printBoxedMessage("🛡️💥 PERFECT GUARD!! การโจมตีถูกยกเลิก! 💥🛡️", '!');
         is_hit = false;
@@ -604,7 +616,7 @@ int main()
           opponentPlayer->displayField();
           std::cout << "Damage Check ครั้งที่ " << (i + 1) << "/" << final_attacker_crit << std::endl;
           if (opponentPlayer->getDeck().isEmpty())
-          { // ตรวจสอบ Deck Out ก่อนจั่ว
+          {
             ClearScreen();
             printBoxedMessage("GAME OVER: " + opponentPlayer->getName() + " แพ้เพราะไม่สามารถทำ Damage Check ได้ (เด็คหมด)! 💀", '!');
             game_over = true;
@@ -620,7 +632,9 @@ int main()
             if (actual_damage_card.getTypeRole().find("Trigger") != std::string::npos)
             {
               int defending_vg_idx = UNIT_STATUS_VC_IDX;
-              opponentPlayer->applyTriggerEffect(actual_damage_card, false, currentPlayer, defending_vg_idx);
+              TriggerOutput dmg_effect = opponentPlayer->applyTriggerEffect(actual_damage_card, false, currentPlayer, defending_vg_idx);
+              // Power ที่ได้จาก Damage Trigger จะถูกเก็บใน current_battle_buffs ของ opponentPlayer
+              // และจะมีผลถ้า Vanguard นั้นถูกโจมตีอีก หรือในเทิร์นหน้า (ถ้าไม่ถูกล้าง)
             }
 
             opponentPlayer->displayField();
@@ -654,7 +668,7 @@ int main()
       attack_again_choice = getActionInput("\nคุณ (" + currentPlayer->getName() + ") ต้องการโจมตีอีกครั้งหรือไม่? (y/n): ", currentPlayer, false);
     }
     if (!game_over)
-    { // ถ้าเกมยังไม่จบจาก Battle Phase
+    {
       std::cout << "จบ Battle Phase ของ " << currentPlayer->getName() << std::endl;
       std::cout << "(กด Enter เพื่อดำเนินการต่อ...)" << std::endl;
       std::cin.get();
@@ -674,7 +688,6 @@ int main()
     std::cout << "(กด Enter เพื่อให้ผู้เล่นถัดไปเริ่มเทิร์น...)" << std::endl;
     std::cin.get();
 
-    // ตรวจสอบเงื่อนไขแพ้หลังจบเทิร์น (เผื่อมีผลจากสกิล End Phase ในอนาคต)
     if (currentPlayer->getDamageCount() >= 6)
     {
       game_over = true;
@@ -683,7 +696,12 @@ int main()
     {
       game_over = true;
     }
-    // การตรวจสอบ Deck out ควรจะเกิดใน Draw Phase หรือเมื่อมีการจั่วจริงๆ
+    // ตรวจสอบ Deck Out ที่นี่อีกครั้ง หลังจากทุกการกระทำในเทิร์นเสร็จสิ้น
+    if (currentPlayer->getDeck().isEmpty() && !game_over)
+    {
+      // สมมติว่าถ้าเด็คหมดตอนจบเทิร์นของผู้เล่นคนนั้น แล้วเทิร์นหน้าเขาต้องจั่วแล้วจั่วไม่ได้ = แพ้
+      // การตรวจสอบที่แม่นยำคือตอน Draw Phase
+    }
 
     if (game_over)
       break;
@@ -707,6 +725,9 @@ int main()
     Player *winner = nullptr;
     Player *loser = nullptr;
 
+    bool p1_deck_out = player1.getDeck().isEmpty() && !player1.performDrawPhase(); // ตรวจสอบว่าถ้าต้องจั่วแล้วจั่วไม่ได้
+    bool p2_deck_out = player2.getDeck().isEmpty() && !player2.performDrawPhase();
+
     if (player1.getDamageCount() >= 6)
     {
       loser = &player1;
@@ -717,12 +738,17 @@ int main()
       loser = &player2;
       winner = &player1;
     }
-    // ตรวจสอบ Deck Out ให้แม่นยำขึ้น: ถ้าผู้เล่นคนปัจจุบันจั่วไม่ได้ใน Draw Phase ของเขา
-    else if (currentPlayer->getDeck().isEmpty() && !currentPlayer->performDrawPhase())
-    { // สมมติว่า performDrawPhase คืน false ถ้าจั่วไม่ได้
-      loser = currentPlayer;
-      winner = opponentPlayer;
+    else if (p1_deck_out && currentPlayer == &player1)
+    { // ถ้า P1 เด็คหมดในเทิร์น P1 (ตอน Draw Phase)
+      loser = &player1;
+      winner = &player2;
     }
+    else if (p2_deck_out && currentPlayer == &player2)
+    { // ถ้า P2 เด็คหมดในเทิร์น P2
+      loser = &player2;
+      winner = &player1;
+    }
+    // กรณีที่ opponent เด็คหมดจากการ Damage Check ก็จะถูกดักจับไปแล้วโดย game_over = true
 
     if (winner && loser)
     {
@@ -732,8 +758,7 @@ int main()
     }
     else
     {
-      // กรณีนี้อาจจะเกิดถ้า loop จบเพราะ turn_count < 20 โดยยังไม่มีใครแพ้
-      printBoxedMessage("เกมจบลง! (อาจจะเสมอ หรือเงื่อนไขอื่นๆ)", '*');
+      printBoxedMessage("เกมจบลง! (ไม่สามารถระบุผู้ชนะจากเงื่อนไขปัจจุบัน)", '*');
     }
   }
   else

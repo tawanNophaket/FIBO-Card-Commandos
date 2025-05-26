@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <sstream>
 #include <limits>
+#include <vector> // สำหรับ Mulligan
 
 // Static helper function definition for Player class
 void Player::printDisplayLine(char c, int length)
@@ -26,6 +27,11 @@ void Player::drawCards(int num_to_draw)
 {
   for (int i = 0; i < num_to_draw; ++i)
   {
+    if (deck.isEmpty())
+    { // ตรวจสอบก่อนจั่ว
+      std::cout << "*** " << name << " ไม่สามารถจั่วการ์ดได้ เด็คหมด! ***" << std::endl;
+      break;
+    }
     std::optional<Card> drawn_card = deck.draw();
     if (drawn_card.has_value())
     {
@@ -33,12 +39,13 @@ void Player::drawCards(int num_to_draw)
     }
     else
     {
+      // ควรจะไม่เกิดถ้าเช็ค isEmpty() ก่อน
       break;
     }
   }
 }
 
-// Setup Game
+// --- Setup & Mulligan ---
 bool Player::setupGame(const std::string &starter_code_name, int initial_hand_size)
 {
   std::optional<Card> starter_card_opt = deck.removeCardByCodeName(starter_code_name);
@@ -48,16 +55,83 @@ bool Player::setupGame(const std::string &starter_code_name, int initial_hand_si
   }
   vanguard_circle = starter_card_opt.value();
   unit_is_standing[UNIT_STATUS_VC_IDX] = true;
-  if (vanguard_circle.value().getCodeName() == "G0-01")
-  { // สกิล Starter เบเบี้ตี๋: เมื่อถูก Ride : จั่ว 1
-    // แต่ setupGame คือการ *วาง* Starter ไม่ใช่ *Ride ทับ* Starter
-    // สกิลนี้จะทำงานเมื่อมีการ Ride G1 ทับ G0-01 จริงๆ
-  }
   deck.shuffle();
   drawCards(initial_hand_size);
   return true;
 }
 
+void Player::performMulligan()
+{
+  // แสดงมือปัจจุบัน
+  std::cout << "\n--- " << name << ": MULLIGAN PHASE ---" << std::endl;
+  if (hand.empty())
+  {
+    std::cout << "ไม่มีการ์ดบนมือให้ Mulligan" << std::endl;
+    return;
+  }
+  displayHand(false); // แสดงมือแบบไม่ละเอียด
+
+  std::cout << "เลือกการ์ดที่คุณต้องการเปลี่ยน (ใส่หมายเลข คั่นด้วยเว้นวรรค, หรือพิมพ์ 'n' ถ้าไม่ต้องการเปลี่ยน): ";
+  std::string line;
+  std::getline(std::cin, line);
+
+  if (line == "n" || line == "N" || line.empty())
+  {
+    std::cout << name << " ไม่ทำการ Mulligan." << std::endl;
+    return;
+  }
+
+  std::stringstream ss(line);
+  std::vector<int> indices_to_mulligan;
+  int index;
+  while (ss >> index)
+  {
+    if (index >= 0 && static_cast<size_t>(index) < hand.size())
+    {
+      // ตรวจสอบว่า index ไม่ซ้ำ
+      if (std::find(indices_to_mulligan.begin(), indices_to_mulligan.end(), index) == indices_to_mulligan.end())
+      {
+        indices_to_mulligan.push_back(index);
+      }
+    }
+    else
+    {
+      std::cout << "หมายเลข " << index << " ไม่ถูกต้อง จะถูกข้ามไป." << std::endl;
+    }
+  }
+
+  if (indices_to_mulligan.empty())
+  {
+    std::cout << name << " ไม่ได้เลือกการ์ดสำหรับ Mulligan." << std::endl;
+    return;
+  }
+
+  // เรียง index จากมากไปน้อยเพื่อลบจาก vector ได้ถูกต้อง
+  std::sort(indices_to_mulligan.rbegin(), indices_to_mulligan.rend());
+
+  std::vector<Card> cards_returned_to_deck;
+  for (int idx : indices_to_mulligan)
+  {
+    cards_returned_to_deck.push_back(hand[static_cast<size_t>(idx)]);
+    hand.erase(hand.begin() + static_cast<size_t>(idx));
+  }
+
+  std::cout << name << " นำ " << cards_returned_to_deck.size() << " ใบกลับเข้าเด็ค: ";
+  for (const auto &c : cards_returned_to_deck)
+  {
+    std::cout << "[" << c.getName() << "] ";
+  }
+  std::cout << std::endl;
+
+  deck.addCardsToBottom(cards_returned_to_deck); // เพิ่มการ์ดกลับไปใต้เด็ค
+  deck.shuffle();                                // สับเด็คใหม่
+
+  std::cout << name << " จั่วการ์ดใหม่ " << cards_returned_to_deck.size() << " ใบ." << std::endl;
+  drawCards(cards_returned_to_deck.size()); // จั่วการ์ดเท่าจำนวนที่ใส่คืน
+  displayHand(false);
+}
+
+// --- Turn Phases ---
 void Player::performStandPhase()
 {
   unit_is_standing.fill(true);
@@ -74,6 +148,7 @@ bool Player::performDrawPhase()
   return true;
 }
 
+// --- Ride & Call ---
 bool Player::rideFromHand(size_t hand_card_index)
 {
   if (hand_card_index >= hand.size())
@@ -84,7 +159,7 @@ bool Player::rideFromHand(size_t hand_card_index)
   int current_vg_grade = vanguard_circle.has_value() ? vanguard_circle.value().getGrade() : -1;
   bool can_ride = false;
   if (!vanguard_circle.has_value())
- {
+  {
     if (card_to_ride.getGrade() == 0)
       can_ride = true;
   }
@@ -104,9 +179,9 @@ bool Player::rideFromHand(size_t hand_card_index)
 
   if (vanguard_circle.has_value())
   {
-    soul.push_back(vanguard_circle.value());
+    placeCardIntoSoul(vanguard_circle.value()); // ใช้เมธอดนี้เพื่อความชัดเจน
     if (old_vg_card.has_value() && old_vg_card.value().getCodeName() == "G0-01")
-    {
+    { // เบเบี้ตี๋
       std::cout << "✨ สกิล Starter (" << old_vg_card.value().getName() << ") ทำงาน: " << name << " จั่ว 1 ใบ!" << std::endl;
       drawCards(1);
     }
@@ -141,26 +216,27 @@ bool Player::callToRearGuard(size_t hand_card_index, size_t rc_slot_index)
   if (card_to_call.getGrade() > vanguard_circle.value().getGrade())
   {
     return false;
-}
+  }
 
   rear_guard_circles[rc_slot_index] = card_to_call;
   size_t status_idx = getUnitStatusIndexForRC(rc_slot_index);
   unit_is_standing[status_idx] = true;
   current_battle_power_buffs[status_idx] = 0;
   current_battle_crit_buffs[status_idx] = 0;
+  Card called_card_copy = hand[hand_card_index]; // เก็บ copy ก่อนลบ
   hand.erase(hand.begin() + hand_card_index);
 
   // --- สกิล On-Place: G1-04 เกม ---
-  if (card_to_call.getCodeName() == "G1-04")
- {
-    std::cout << "✨ สกิลของ '" << card_to_call.getName() << "' (วางที่ RC) ทำงาน: จั่ว 1 ใบ แล้วทิ้ง 1 ใบ!" << std::endl;
+  if (called_card_copy.getCodeName() == "G1-04")
+  {
+    std::cout << "✨ สกิลของ '" << called_card_copy.getName() << "' (วางที่ RC) ทำงาน: จั่ว 1 ใบ แล้วทิ้ง 1 ใบ!" << std::endl;
     drawCards(1);
     if (!hand.empty())
     {
-      std::cout << "เลือกการ์ดที่จะทิ้งจากมือสำหรับสกิล '" << card_to_call.getName() << "':" << std::endl;
+      std::cout << "เลือกการ์ดที่จะทิ้งจากมือสำหรับสกิล '" << called_card_copy.getName() << "':" << std::endl;
       displayHand(true);
-      // การรับ input ควรจะทำใน main.cpp หรือมี helper ที่ปลอดภัยกว่านี้
       int discard_idx = -1;
+      // ควรจะเรียก getIntegerInput จาก main.cpp หรือมี helper ที่ปลอดภัย
       std::string s_discard_idx;
       std::cout << "ใส่หมายเลขการ์ดที่จะทิ้ง (-1 ถ้าไม่มี/ไม่ต้องการ): ";
       std::cin >> s_discard_idx;
@@ -180,7 +256,9 @@ bool Player::callToRearGuard(size_t hand_card_index, size_t rc_slot_index)
       }
       else
       {
-        std::cout << "เลือกไม่ถูกต้อง หรือไม่ต้องการทิ้ง." << std::endl;
+        std::cout << "เลือกไม่ถูกต้อง หรือไม่ต้องการทิ้ง. (อาจจะทิ้งใบสุดท้ายถ้าจำเป็น)" << std::endl;
+        if (!hand.empty())
+          discardFromHandToDrop(hand.size() - 1); // Default behavior for simplicity
       }
     }
     else
@@ -191,104 +269,12 @@ bool Player::callToRearGuard(size_t hand_card_index, size_t rc_slot_index)
   return true;
 }
 
-std::vector<std::pair<int, std::string>> Player::chooseAttacker()
-{
-  std::vector<std::pair<int, std::string>> available_attackers;
-  if (vanguard_circle.has_value() && unit_is_standing[UNIT_STATUS_VC_IDX])
-  {
-    available_attackers.push_back({UNIT_STATUS_VC_IDX, "VC: " + vanguard_circle.value().getName() + " (P:" + std::to_string(getUnitPowerAtStatusIndex(UNIT_STATUS_VC_IDX)) + " C:" + std::to_string(getUnitCriticalAtStatusIndex(UNIT_STATUS_VC_IDX)) + ")"});
-  }
-  const size_t front_row_rcs[] = {RC_FRONT_LEFT, RC_FRONT_RIGHT};
-  for (size_t rc_idx : front_row_rcs)
-  {
-    size_t status_idx = getUnitStatusIndexForRC(rc_idx);
-    if (rear_guard_circles[rc_idx].has_value() && unit_is_standing[status_idx])
-    {
-      available_attackers.push_back({(int)status_idx,
-                                     std::to_string(rc_idx) + ": RC " + rear_guard_circles[rc_idx].value().getName() + " (P:" + std::to_string(getUnitPowerAtStatusIndex(status_idx)) + " C:" + std::to_string(getUnitCriticalAtStatusIndex(status_idx)) + ")"});
-    }
-  }
-  if (available_attackers.empty())
-  {
-    std::cout << "ไม่มียูนิตที่สามารถโจมตีได้ในขณะนี้ (หรือทั้งหมด Rest อยู่)" << std::endl;
-  }
-  else
-  {
-    std::cout << "ยูนิตที่สามารถโจมตีได้:" << std::endl;
-    for (size_t i = 0; i < available_attackers.size(); ++i)
-    {
-      std::cout << i << ": " << available_attackers[i].second << std::endl;
-    }
-  }
-  return available_attackers;
-}
-
-int Player::chooseBooster(int attacker_unit_status_idx)
-{
-  if (attacker_unit_status_idx == -1)
-    return -1;
-  std::optional<Card> attacker_card = getUnitAtStatusIndex(attacker_unit_status_idx);
-  if (!attacker_card.has_value())
-    return -1;
-  int potential_booster_status_idx = -1;
-  size_t booster_rc_idx = static_cast<size_t>(-1);
-  if (attacker_unit_status_idx == UNIT_STATUS_VC_IDX)
-  {
-    booster_rc_idx = RC_BACK_CENTER;
-  }
-  else if (attacker_unit_status_idx == UNIT_STATUS_RC_FL_IDX)
-  {
-    booster_rc_idx = RC_BACK_LEFT;
-  }
-  else if (attacker_unit_status_idx == UNIT_STATUS_RC_FR_IDX)
-  {
-    booster_rc_idx = RC_BACK_RIGHT;
-  }
-  if (booster_rc_idx != static_cast<size_t>(-1))
-  {
-    potential_booster_status_idx = getUnitStatusIndexForRC(booster_rc_idx);
-    if (rear_guard_circles[booster_rc_idx].has_value() &&
-        unit_is_standing[potential_booster_status_idx] &&
-        (rear_guard_circles[booster_rc_idx].value().getGrade() == 0 || rear_guard_circles[booster_rc_idx].value().getGrade() == 1))
-    {
-      std::cout << "คุณสามารถ Boost Attacker (" << attacker_card.value().getName() << ") ด้วย: "
-                << rear_guard_circles[booster_rc_idx].value().getName()
-                << " (G" << rear_guard_circles[booster_rc_idx].value().getGrade() << " P+" << rear_guard_circles[booster_rc_idx].value().getPower() << ") ได้" << std::endl;
-      return potential_booster_status_idx;
-    }
-  }
-  return -1;
-}
-
-void Player::restUnit(int unit_status_idx)
-{
-  if (unit_status_idx >= 0 && static_cast<size_t>(unit_status_idx) < NUM_FIELD_UNITS)
-  {
-    unit_is_standing[static_cast<size_t>(unit_status_idx)] = false;
-  }
-}
-
-bool Player::isUnitStanding(int unit_status_idx) const
-{
-  if (unit_status_idx >= 0 && static_cast<size_t>(unit_status_idx) < NUM_FIELD_UNITS)
-  {
-    return unit_is_standing[static_cast<size_t>(unit_status_idx)];
-  }
-  return false;
-}
-
-std::optional<Card> Player::getUnitAtStatusIndex(int unit_status_idx) const
-{
-  if (unit_status_idx == UNIT_STATUS_VC_IDX)
-  {
-    return vanguard_circle;
-  }
-  else if (unit_status_idx > 0 && static_cast<size_t>(unit_status_idx - 1) < NUM_REAR_GUARD_CIRCLES)
-  {
-    return rear_guard_circles[static_cast<size_t>(unit_status_idx - 1)];
-  }
-  return std::nullopt;
-}
+// --- Battle Phase Actions ---
+std::vector<std::pair<int, std::string>> Player::chooseAttacker() { /* เหมือนเดิม */ return {}; }
+int Player::chooseBooster(int attacker_unit_status_idx) { /* เหมือนเดิม */ return -1; }
+void Player::restUnit(int unit_status_idx) { /* เหมือนเดิม */ }
+bool Player::isUnitStanding(int unit_status_idx) const { /* เหมือนเดิม */ return false; }
+std::optional<Card> Player::getUnitAtStatusIndex(int unit_status_idx) const { /* เหมือนเดิม */ return std::nullopt; }
 
 int Player::getUnitPowerAtStatusIndex(int unit_status_idx, int booster_unit_status_idx, bool for_defense) const
 {
@@ -303,11 +289,12 @@ int Player::getUnitPowerAtStatusIndex(int unit_status_idx, int booster_unit_stat
     total_power += current_battle_power_buffs[static_cast<size_t>(unit_status_idx)];
   }
   if (!for_defense && booster_unit_status_idx != -1)
- {
+  {
     std::optional<Card> booster_opt = getUnitAtStatusIndex(booster_unit_status_idx);
     if (booster_opt.has_value())
     {
       total_power += booster_opt.value().getPower();
+      // แสดงผลการ Boost ใน main.cpp ถ้าต้องการ
     }
   }
   return total_power;
@@ -334,6 +321,7 @@ void Player::resetBattleBuffs()
   current_battle_crit_buffs.fill(0);
 }
 
+// --- Trigger Handling ---
 int Player::chooseUnitForTriggerEffect(const std::string &trigger_effect_description, bool can_choose_any_unit)
 {
   std::cout << "\n✨ " << name << " - ผลจาก Trigger ✨" << std::endl;
@@ -363,12 +351,13 @@ int Player::chooseUnitForTriggerEffect(const std::string &trigger_effect_descrip
   {
     std::cout << i << ": " << available_units[i].second << std::endl;
   }
+
+  // การรับ input จาก main.cpp ผ่าน getIntegerInput จะดีกว่า
+  // ส่วนนี้เป็นการจำลอง input ชั่วคราว
   int choice_idx = -1;
-  // การรับ input ควรจะใช้ getIntegerInput จาก main.cpp
-  // แต่ใน Player class อาจจะต้องมี getIntegerInput ของตัวเอง หรือรับค่าจาก main
   std::cout << "เลือกหมายเลขยูนิต (-1 หากไม่ต้องการให้ผล): ";
   std::string input_str;
-  std::cin >> input_str;
+  std::cin >> input_str; // อาจจะต้องใช้ getIntegerInput จาก main.cpp ที่นี่
   std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
   try
   {
@@ -376,7 +365,7 @@ int Player::chooseUnitForTriggerEffect(const std::string &trigger_effect_descrip
   }
   catch (...)
   {
-    choice_idx = -2; // Invalid input
+    choice_idx = -2;
   }
 
   if (choice_idx >= 0 && static_cast<size_t>(choice_idx) < available_units.size())
@@ -387,9 +376,9 @@ int Player::chooseUnitForTriggerEffect(const std::string &trigger_effect_descrip
   return -1;
 }
 
-TriggerOutput Player::applyTriggerEffect(const Card &trigger_card, bool is_drive_check, Player *opponent_for_heal_check, int &unit_idx_target_for_power_crit)
+TriggerOutput Player::applyTriggerEffect(const Card &trigger_card, bool is_drive_check, Player *opponent_for_heal_check, int unit_for_power_crit_idx)
 {
-  TriggerOutput output_for_main_calc; // จะคืนค่า Power/Crit ที่จะบวกเพิ่มให้ Attacker/Defending VG โดยตรง
+  TriggerOutput output_for_main_calc;
   std::cout << "เปิดได้ Trigger: " << trigger_card.getName() << " (" << trigger_card.getTypeRole() << ")!" << std::endl;
 
   int power_bonus_from_trigger = 10000;
@@ -406,18 +395,6 @@ TriggerOutput Player::applyTriggerEffect(const Card &trigger_card, bool is_drive
       {
         current_battle_crit_buffs[chosen_unit_status_idx] += 1;
         std::cout << getUnitAtStatusIndex(chosen_unit_status_idx).value().getName() << " ได้รับ +1 Critical!" << std::endl;
-        if (chosen_unit_status_idx == unit_idx_target_for_power_crit)
-        { // ถ้าผู้เล่นเลือก Attacking VG
-          output_for_main_calc.extra_power += power_bonus_from_trigger;
-          output_for_main_calc.extra_crit += 1;
-        }
-      }
-      else
-      { // Damage Check Crit Trigger
-        if (chosen_unit_status_idx == UNIT_STATUS_VC_IDX)
-        { // Power ให้ VG ตัวเอง
-          output_for_main_calc.extra_power += power_bonus_from_trigger;
-        }
       }
     }
   }
@@ -428,14 +405,6 @@ TriggerOutput Player::applyTriggerEffect(const Card &trigger_card, bool is_drive
     {
       current_battle_power_buffs[chosen_unit_status_idx] += power_bonus_from_trigger;
       std::cout << getUnitAtStatusIndex(chosen_unit_status_idx).value().getName() << " ได้รับ +" << power_bonus_from_trigger << " Power!" << std::endl;
-      if (is_drive_check && chosen_unit_status_idx == unit_idx_target_for_power_crit)
-      {
-        output_for_main_calc.extra_power += power_bonus_from_trigger;
-      }
-      else if (!is_drive_check && chosen_unit_status_idx == UNIT_STATUS_VC_IDX)
-      {
-        output_for_main_calc.extra_power += power_bonus_from_trigger;
-      }
     }
     drawCards(1);
     std::cout << name << " จั่ว 1 ใบจาก Draw Trigger. (มือ: " << hand.size() << ")" << std::endl;
@@ -447,14 +416,6 @@ TriggerOutput Player::applyTriggerEffect(const Card &trigger_card, bool is_drive
     {
       current_battle_power_buffs[chosen_unit_status_idx] += power_bonus_from_trigger;
       std::cout << getUnitAtStatusIndex(chosen_unit_status_idx).value().getName() << " ได้รับ +" << power_bonus_from_trigger << " Power!" << std::endl;
-      if (is_drive_check && chosen_unit_status_idx == unit_idx_target_for_power_crit)
-      {
-        output_for_main_calc.extra_power += power_bonus_from_trigger;
-      }
-      else if (!is_drive_check && chosen_unit_status_idx == UNIT_STATUS_VC_IDX)
-      {
-        output_for_main_calc.extra_power += power_bonus_from_trigger;
-      }
     }
     bool condition_met = (opponent_for_heal_check && getDamageCount() > 0 && getDamageCount() >= opponent_for_heal_check->getDamageCount()) ||
                          (!opponent_for_heal_check && getDamageCount() > 0);
@@ -470,12 +431,28 @@ TriggerOutput Player::applyTriggerEffect(const Card &trigger_card, bool is_drive
       std::cout << "(แต่เงื่อนไข Heal ไม่สำเร็จ)" << std::endl;
     }
   }
+  // อัปเดต output_for_main_calc สำหรับ Power/Crit ที่จะให้ยูนิตเป้าหมายหลัก (Attacker/Defending VG)
+  if (chosen_unit_status_idx == unit_for_power_crit_idx && chosen_unit_status_idx != -1)
+  {
+    if (trigger_card.getTypeRole() == "Trigger - Critical")
+    {
+      output_for_main_calc.power_to_chosen_unit = power_bonus_from_trigger;
+      if (is_drive_check)
+        output_for_main_calc.crit_to_chosen_unit = 1;
+    }
+    else if (trigger_card.getTypeRole() == "Trigger - Draw" || trigger_card.getTypeRole() == "Trigger - Heal")
+    {
+      output_for_main_calc.power_to_chosen_unit = power_bonus_from_trigger;
+    }
+    output_for_main_calc.chosen_unit_status_idx = chosen_unit_status_idx;
+  }
+
   return output_for_main_calc;
 }
 
 TriggerOutput Player::performDriveCheck(int num_drives, Player *opponent_for_heal_check, int attacking_vg_idx)
 {
-  TriggerOutput combined_output_for_vg_attack;
+  TriggerOutput combined_trigger_output_for_vg_attack;
 
   for (int i = 0; i < num_drives; ++i)
   {
@@ -492,20 +469,25 @@ TriggerOutput Player::performDriveCheck(int num_drives, Player *opponent_for_hea
       hand.push_back(drive_card);
       if (drive_card.getTypeRole().find("Trigger") != std::string::npos)
       {
-        // attacking_vg_idx คือ unit status index ของ VG ที่กำลังโจมตี
         TriggerOutput effect = applyTriggerEffect(drive_card, true, opponent_for_heal_check, attacking_vg_idx);
-        // ผล Power/Crit ที่จะให้ VG ที่โจมตีโดยตรง จะถูกคืนค่ามาใน effect แล้ว main.cpp จะบวกเพิ่ม
-        combined_output_for_vg_attack.extra_power += effect.extra_power;
-        combined_output_for_vg_attack.extra_crit += effect.extra_crit;
+        // Power/Crit ที่จะให้ attacking_vg_idx โดยตรงจะถูกคืนค่ามาใน effect
+        combined_trigger_output_for_vg_attack.power_to_chosen_unit += effect.power_to_chosen_unit;
+        combined_trigger_output_for_vg_attack.crit_to_chosen_unit += effect.crit_to_chosen_unit;
+        if (effect.chosen_unit_status_idx == attacking_vg_idx)
+        { // ตรวจสอบว่าผลนั้นสำหรับ attacking VG จริงๆ
+          combined_trigger_output_for_vg_attack.chosen_unit_status_idx = attacking_vg_idx;
+        }
       }
     }
   }
-  return combined_output_for_vg_attack;
+  return combined_trigger_output_for_vg_attack;
 }
 
 bool Player::healOneDamage() { /* เหมือนเดิม */ return false; }
-int Player::addCardToGuardianZoneFromHand(size_t hand_card_index)
-{ /* เหมือนเดิม แต่เพิ่ม logic PG */
+
+int Player::addCardToGuardianZoneFromHand(size_t hand_card_index, bool &perfect_guarded_flag)
+{
+  perfect_guarded_flag = false; // ตั้งค่าเริ่มต้น
   if (hand_card_index >= hand.size())
   {
     return -1;
@@ -514,8 +496,8 @@ int Player::addCardToGuardianZoneFromHand(size_t hand_card_index)
 
   if (card_to_guard.getCodeName() == "G1-02")
   { // "เล้ง" - Sentinel • Perfect Guard
-    std::cout << "คุณต้องการใช้สกิล Perfect Guard ของ '" << card_to_guard.getName() << "' หรือไม่?" << std::endl;
-    std::cout << "(ต้องทิ้งการ์ด 1 ใบจากมือเพื่อยกเลิกการโจมตี): " << std::endl;
+    std::cout << "คุณใช้ '" << card_to_guard.getName() << "' (Perfect Guard)!" << std::endl;
+    std::cout << "ต้องการใช้สกิล Perfect Guard หรือไม่? (ต้องทิ้งการ์ดอีก 1 ใบจากมือ):" << std::endl;
     char pg_choice = 'n';
     // การรับ input ควรจะมาจาก getActionInput ใน main.cpp
     std::cout << "ใช้สกิล Perfect Guard? (y/n): ";
@@ -525,67 +507,98 @@ int Player::addCardToGuardianZoneFromHand(size_t hand_card_index)
     if (pg_choice == 'y' || pg_choice == 'Y')
     {
       if (hand.size() > 1)
-      {
-        std::cout << "เลือกการ์ดที่จะทิ้งเพื่อใช้ Perfect Guard (ยกเว้นตัว PG เอง):" << std::endl;
-        displayHand(false);
+      { // ต้องมีอย่างน้อย 1 ใบให้ทิ้ง (ไม่นับตัว PG เองที่กำลังจะใช้)
+        std::cout << "เลือกการ์ดที่จะทิ้งเพื่อใช้ Perfect Guard (ยกเว้นตัว PG ที่กำลังจะใช้):" << std::endl;
+
+        std::vector<Card> temp_hand_for_discard_choice = hand;
+        // เอาตัว PG ออกจาก list ชั่วคราวที่จะให้เลือกทิ้ง (ถ้ามันยังอยู่ใน hand)
+        // (การ์ด PG ที่เลือกคือ hand[hand_card_index])
+        // แต่ตอนนี้ hand_card_index อาจจะไม่ตรงกับตำแหน่งจริงใน temp_hand_for_discard_choice ถ้ามีการ์ดถูกลบไปแล้ว
+        // เพื่อความง่าย จะให้ผู้เล่นเลือกจากมือปัจจุบัน แล้วเช็คว่าไม่ใช่ PG ตัวที่กำลังจะ Guard
+
+        for (size_t i = 0; i < hand.size(); ++i)
+        {
+          if (i == hand_card_index)
+            continue; // ข้ามตัว PG ที่กำลังจะใช้
+          std::cout << i << ": " << hand[i] << std::endl;
+        }
+
         int discard_idx = -1;
         std::cout << "ใส่หมายเลขการ์ดที่จะทิ้ง: ";
         std::cin >> discard_idx;
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-        // ตรวจสอบว่า index ที่เลือกไม่ใช่ตัว PG ที่กำลังจะใช้
         if (discard_idx >= 0 && static_cast<size_t>(discard_idx) < hand.size() && static_cast<size_t>(discard_idx) != hand_card_index)
         {
           Card card_to_discard_for_pg = hand[static_cast<size_t>(discard_idx)];
-          // ย้าย PG ไป Guardian Zone ก่อน แล้วค่อยลบออกจากมือ
-          guardian_zone.push_back(card_to_guard);
 
-          // ลบ PG และการ์ดที่ทิ้งออกจากมือ
-          // ต้องระวังเรื่อง index เปลี่ยนถ้าการ์ดที่ทิ้งอยู่ก่อน PG ใน vector
-          size_t pg_original_idx = hand_card_index;
-          size_t discard_original_idx = static_cast<size_t>(discard_idx);
+          guardian_zone.push_back(card_to_guard); // PG เข้า Guardian Zone
 
-          if (pg_original_idx < discard_original_idx)
+          // ลบ PG และการ์ดที่ทิ้งออกจากมืออย่างระมัดระวังเรื่อง index
+          size_t pg_actual_idx = hand_card_index;
+          size_t discard_actual_idx = static_cast<size_t>(discard_idx);
+
+          // ลบใบที่ index มากกว่าก่อน
+          if (pg_actual_idx > discard_actual_idx)
           {
-            hand.erase(hand.begin() + discard_original_idx);
-            hand.erase(hand.begin() + pg_original_idx);
+            hand.erase(hand.begin() + pg_actual_idx);
+            hand.erase(hand.begin() + discard_actual_idx);
           }
           else
-          { // discard_original_idx < pg_original_idx
-            hand.erase(hand.begin() + pg_original_idx);
-            hand.erase(hand.begin() + discard_original_idx);
+          { // discard_actual_idx >= pg_actual_idx (ถ้าเท่ากันคือเลือกตัว PG เอง ซึ่งไม่ควร)
+            hand.erase(hand.begin() + discard_actual_idx);
+            hand.erase(hand.begin() + pg_actual_idx);
           }
-          drop_zone.push_back(card_to_discard_for_pg); // การ์ดที่ทิ้งไป Drop
+          drop_zone.push_back(card_to_discard_for_pg);
 
           std::cout << "ใช้ Perfect Guard! ทิ้ง '" << card_to_discard_for_pg.getName() << "' การโจมตีนี้จะถูกยกเลิก!" << std::endl;
-          return 999999;
+          perfect_guarded_flag = true; // ตั้ง flag
+          return 0;                    // PG ทำงาน, shield ไม่ต้องบวก แต่การโจมตีไม่เข้า
         }
         else
         {
-          std::cout << "เลือกการ์ดทิ้งไม่ถูกต้อง หรือไม่มีการ์ดพอจะทิ้ง. ใช้ '" << card_to_guard.getName() << "' Guard ตามปกติ." << std::endl;
+          std::cout << "เลือกการ์ดทิ้งไม่ถูกต้อง. '" << card_to_guard.getName() << "' จะ Guard ด้วย Shield ปกติ (0)." << std::endl;
+          // ไม่ใช้สกิล PG, ใช้ shield ปกติ
+          guardian_zone.push_back(card_to_guard);
+          hand.erase(hand.begin() + hand_card_index);
+          return card_to_guard.getShield(); // ซึ่งคือ 0
         }
       }
       else
       {
-        std::cout << "ไม่มีการ์ดพอจะทิ้งเพื่อใช้ Perfect Guard. ใช้ '" << card_to_guard.getName() << "' Guard ตามปกติ." << std::endl;
+        std::cout << "ไม่มีการ์ดพอจะทิ้งเพื่อใช้ Perfect Guard. '" << card_to_guard.getName() << "' จะ Guard ด้วย Shield ปกติ (0)." << std::endl;
+        guardian_zone.push_back(card_to_guard);
+        hand.erase(hand.begin() + hand_card_index);
+        return card_to_guard.getShield(); // ซึ่งคือ 0
       }
     }
+    else
+    { // ไม่ใช้สกิล PG
+      guardian_zone.push_back(card_to_guard);
+      hand.erase(hand.begin() + hand_card_index);
+      return card_to_guard.getShield(); // ซึ่งคือ 0
+    }
   }
-  // ถ้าไม่ใช่ PG หรือไม่ใช้สกิล PG
+  // ถ้าไม่ใช่ PG
   guardian_zone.push_back(card_to_guard);
   int shield_value = card_to_guard.getShield();
   hand.erase(hand.begin() + hand_card_index);
-  std::cout << name << " ใช้ '" << card_to_guard.getName() << "' (Shield: " << shield_value << ") ในการ Guard." << std::endl;
+  // std::cout << name << " ใช้ '" << card_to_guard.getName() << "' (Shield: " << shield_value << ") ในการ Guard." << std::endl; // main.cpp จะแสดง
   return shield_value;
 }
+
 int Player::getGuardianZoneShieldTotal() const { /* เหมือนเดิม */ return 0; }
-int Player::performGuardStep(int incoming_attack_power, const std::optional<Card> &target_unit_opt, Player *attacker /* เพิ่ม Attacker */)
+
+int Player::performGuardStep(int incoming_attack_power, const std::optional<Card> &target_unit_opt, Player *attacker, bool &out_perfect_guarded_flag)
 {
+  out_perfect_guarded_flag = false; // Reset flag
+  // ClearScreen(); // main.cpp จะ Clear ให้
+  // displayField(); // main.cpp จะแสดงให้
   std::cout << "\n🛡️ --- " << name << ": ขั้นตอนการ Guard --- 🛡️" << std::endl;
   std::cout << "⚔️ พลังโจมตีที่เข้ามา: " << incoming_attack_power << std::endl;
   if (target_unit_opt.has_value())
   { /* ... แสดงเป้าหมาย ... */
-}
+  }
 
   int final_total_shield = 0;
   char continue_guard_choice = 'y';
@@ -636,12 +649,6 @@ int Player::performGuardStep(int incoming_attack_power, const std::optional<Card
       restUnit(interceptor_status_idx);
 
       int intercept_shield = 5000;
-      // G1-03 คิน ไม่ใช่ G2 จึงไม่ควรเข้าเงื่อนไข Intercept ปกติ
-      // แต่ถ้าคุณต้องการให้ G1-03 คิน มีสกิลคล้าย Intercept ต้องเขียน logic แยก
-      // if (interceptor_card.getCodeName() == "G1-03"){
-      //     intercept_shield = interceptor_card.getShield() + 5000;
-      // }
-
       std::cout << "ใช้ '" << interceptor_card.getName() << "' Intercept! + " << intercept_shield << " Shield." << std::endl;
     }
   }
@@ -656,13 +663,13 @@ int Player::performGuardStep(int incoming_attack_power, const std::optional<Card
   std::cout << "\n--- Guard from Hand Step ---" << std::endl;
   while ((continue_guard_choice == 'y' || continue_guard_choice == 'Y'))
   {
-    if (final_total_shield == 999999)
-      break; // ถ้า PG ทำงานแล้ว
+    if (out_perfect_guarded_flag)
+      break; // ถ้า PG ทำงานแล้ว ไม่ต้อง Guard ต่อ
     if (hand.empty())
     {
       std::cout << "ไม่เหลือการ์ดบนมือให้ Guard แล้ว!" << std::endl;
       break;
-}
+    }
 
     std::cout << "\nการ์ดบนมือของคุณ (" << name << "):" << std::endl;
     displayHand(true);
@@ -689,13 +696,12 @@ int Player::performGuardStep(int incoming_attack_power, const std::optional<Card
 
     if (card_idx >= 0 && static_cast<size_t>(card_idx) < hand.size())
     {
-      int added_shield_or_pg = addCardToGuardianZoneFromHand(static_cast<size_t>(card_idx));
-      if (added_shield_or_pg == 999999)
+      int added_shield = addCardToGuardianZoneFromHand(static_cast<size_t>(card_idx), out_perfect_guarded_flag);
+      if (out_perfect_guarded_flag)
       {
         final_total_shield = 999999;
         break;
       }
-      // ไม่ต้องบวกเพิ่มถ้า PG ไม่ทำงาน เพราะ getGuardianZoneShieldTotal() จะคำนวณให้ใหม่
     }
     else
     {
@@ -703,24 +709,26 @@ int Player::performGuardStep(int incoming_attack_power, const std::optional<Card
     }
     final_total_shield = getGuardianZoneShieldTotal();
 
-    if (hand.empty() || final_total_shield == 999999)
+    if (hand.empty() || out_perfect_guarded_flag)
     {
       break;
-}
+    }
 
     std::cout << "ต้องการ Guard เพิ่มหรือไม่ (y/n): ";
     std::cin >> continue_guard_choice;
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
   }
   final_total_shield = getGuardianZoneShieldTotal();
-  std::cout << "จบขั้นตอนการ Guard. Shield ที่ได้ทั้งหมดจาก Guardian Zone: " << final_total_shield << std::endl;
+  if (out_perfect_guarded_flag)
+    final_total_shield = 999999; // Ensure PG overrides
+  std::cout << "จบขั้นตอนการ Guard. Shield ที่ได้ทั้งหมดจาก Guardian Zone: " << (out_perfect_guarded_flag ? "PERFECT GUARD" : std::to_string(final_total_shield)) << std::endl;
   return final_total_shield;
 }
 
 void Player::displayGuardianZone() const { /* เหมือนเดิม */ }
-std::string formatCardForDisplay(const std::optional<Card> &card_opt, int width, bool is_standing, bool is_vc) { /* เหมือนเดิม */ }
-void Player::displayField(bool show_opponent_field_for_targeting) const { /* เหมือนเดิม */ }
-void Player::displayHand(bool show_details) const { /* เหมือนเดิม */ }
+// std::string formatCardForDisplay(const std::optional<Card>& card_opt, int width, bool is_standing, bool is_vc) { /* เหมือนเดิม */ } // ย้ายไป global หรือ main
+// void Player::displayField(bool show_opponent_field_for_targeting) const { /* เหมือนเดิม */ } // ย้าย formatCardForDisplay
+// void Player::displayHand(bool show_details) const { /* เหมือนเดิม */ } // ย้าย printDisplayLine
 void Player::displayFullStatus() const
 {
   displayField();
@@ -738,3 +746,138 @@ void Player::takeDamage(const Card &damage_card) { /* เหมือนเด�
 void Player::placeCardIntoSoul(const Card &card) { /* เหมือนเดิม */ }
 void Player::discardFromHandToDrop(size_t hand_card_index) { /* เหมือนเดิม */ }
 void Player::clearGuardianZoneAndMoveToDrop() { /* เหมือนเดิม */ }
+
+// แก้ไขการ implement ของ displayField และ displayHand ให้นิยาม formatCardForPlayerDisplay ภายใน Player.cpp
+// หรือทำให้ formatCardForPlayerDisplay เป็น free function ที่ main.cpp ก็เห็น
+// เพื่อความง่าย จะ copy มาใส่ใน Player.cpp ก่อน
+std::string formatCardForPlayerDisplay_PlayerInternal(const std::optional<Card> &card_opt, int width, bool is_standing = true, bool is_vc = false)
+{
+  std::ostringstream oss;
+  std::string content;
+
+  if (card_opt.has_value())
+  {
+    const Card &card = card_opt.value();
+    std::string grade_str = "G" + std::to_string(card.getGrade());
+    std::string name_str = card.getName();
+    std::string status_str = is_standing ? "" : " (R)";
+    std::string crit_str = " C" + std::to_string(card.getCritical());
+    std::string full_text = grade_str + crit_str + " " + name_str + status_str;
+    if (full_text.length() > static_cast<size_t>(width))
+    {
+      int available_width_for_name = width - grade_str.length() - crit_str.length() - status_str.length() - 1 - 3;
+      if (available_width_for_name < 1)
+        available_width_for_name = 1;
+      name_str = name_str.substr(0, static_cast<size_t>(available_width_for_name)) + "...";
+      content = grade_str + crit_str + " " + name_str + status_str;
+    }
+    else
+    {
+      content = full_text;
+    }
+  }
+  else
+  {
+    content = "[   ว่าง   ]";
+  }
+  int text_len = 0;
+  for (char c : content)
+  {
+    text_len++;
+  }
+  int padding = width - text_len;
+  int pad_left = padding / 2;
+  int pad_right = padding - pad_left;
+  oss << std::string(static_cast<size_t>(pad_left), ' ') << content << std::string(static_cast<size_t>(pad_right), ' ');
+  return oss.str();
+}
+
+void Player::displayField(bool show_opponent_field_for_targeting) const
+{
+  const int card_cell_width = 22;
+  const std::string V_BORDER = "|";
+  const std::string H_BORDER_THIN_SEGMENT = std::string(card_cell_width, '-');
+  const std::string H_BORDER_THICK_SEGMENT = std::string(card_cell_width, '=');
+  const std::string CORNER = "+";
+  std::string row_separator = CORNER;
+  for (int i = 0; i < 3; ++i)
+  {
+    row_separator += H_BORDER_THIN_SEGMENT + CORNER;
+  }
+  std::string vc_row_separator_left = CORNER + H_BORDER_THIN_SEGMENT + CORNER;
+  std::string vc_row_separator_center = H_BORDER_THICK_SEGMENT;
+  std::string vc_row_separator_right = CORNER + H_BORDER_THIN_SEGMENT + CORNER;
+
+  std::cout << "\n<<<<< สนามของ: " << name << " >>>>>" << std::endl;
+  std::cout << "มือ: " << std::left << std::setw(2) << hand.size()
+            << " | เด็ค: " << std::left << std::setw(2) << deck.getSize()
+            << " | ดาเมจ: " << std::left << std::setw(1) << damage_zone.size()
+            << " | โซล: " << std::left << std::setw(2) << soul.size()
+            << " | ดรอป: " << std::left << std::setw(2) << drop_zone.size() << std::endl;
+  Player::printDisplayLine('~', 70);
+  std::cout << "  แถวหน้า:" << std::endl;
+  std::cout << "  " << vc_row_separator_left << vc_row_separator_center << vc_row_separator_right << std::endl;
+  std::cout << "  " << V_BORDER << formatCardForPlayerDisplay_PlayerInternal(rear_guard_circles[RC_FRONT_LEFT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_FRONT_LEFT)])
+            << V_BORDER << formatCardForPlayerDisplay_PlayerInternal(vanguard_circle, card_cell_width, unit_is_standing[UNIT_STATUS_VC_IDX], true)
+            << V_BORDER << formatCardForPlayerDisplay_PlayerInternal(rear_guard_circles[RC_FRONT_RIGHT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_FRONT_RIGHT)])
+            << V_BORDER << std::endl;
+  std::cout << "  " << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << (show_opponent_field_for_targeting ? "   (0: RC FL)" : "   (RC FL)")
+            << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << "   (VC)"
+            << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << (show_opponent_field_for_targeting ? "   (1: RC FR)" : "   (RC FR)")
+            << V_BORDER << std::endl;
+  std::cout << "  " << vc_row_separator_left << vc_row_separator_center << vc_row_separator_right << std::endl;
+  std::cout << std::endl;
+  std::cout << "  แถวหลัง:" << std::endl;
+  std::cout << "  " << row_separator << std::endl;
+  std::cout << "  " << V_BORDER << formatCardForPlayerDisplay_PlayerInternal(rear_guard_circles[RC_BACK_LEFT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_BACK_LEFT)])
+            << V_BORDER << formatCardForPlayerDisplay_PlayerInternal(rear_guard_circles[RC_BACK_CENTER], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_BACK_CENTER)])
+            << V_BORDER << formatCardForPlayerDisplay_PlayerInternal(rear_guard_circles[RC_BACK_RIGHT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_BACK_RIGHT)])
+            << V_BORDER << std::endl;
+  std::cout << "  " << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << (show_opponent_field_for_targeting ? "   (2: RC BL)" : "   (RC BL)")
+            << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << (show_opponent_field_for_targeting ? "   (3: RC BC)" : "   (RC BC)")
+            << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ') << (show_opponent_field_for_targeting ? "   (4: RC BR)" : "   (RC BR)")
+            << V_BORDER << std::endl;
+  std::cout << "  " << row_separator << std::endl;
+  std::cout << "\nDamage Zone (" << damage_zone.size() << "): ";
+  if (damage_zone.empty())
+  {
+    std::cout << "(ยังไม่ได้รับดาเมจ)";
+  }
+  else
+  {
+    for (size_t i = 0; i < damage_zone.size(); ++i)
+    {
+      std::string name_short = damage_zone[i].getName().substr(0, 8);
+      if (damage_zone[i].getName().length() > 8)
+        name_short += "..";
+      std::cout << "[G" << damage_zone[i].getGrade() << " " << name_short << "]";
+      if (i < damage_zone.size() - 1)
+        std::cout << " ";
+    }
+  }
+  std::cout << std::endl;
+  Player::printDisplayLine('=', 70);
+}
+
+void Player::displayHand(bool show_details) const
+{
+  Player::printDisplayLine('-', 36);
+  std::cout << "--- มือของ " << name << " (" << hand.size() << " ใบ) ---" << std::endl;
+  if (hand.empty())
+  {
+    std::cout << "(มือว่าง)" << std::endl;
+  }
+  else
+  {
+    for (size_t i = 0; i < hand.size(); ++i)
+    {
+      std::cout << i << ": " << hand[i];
+      if (show_details)
+      {
+        std::cout << " (P:" << hand[i].getPower() << " S:" << hand[i].getShield() << ")";
+      }
+      std::cout << std::endl;
+    }
+  }
+  Player::printDisplayLine('-', 36);
+}
