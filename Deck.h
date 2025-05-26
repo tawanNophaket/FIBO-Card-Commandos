@@ -21,9 +21,9 @@ public:
   std::optional<Card> draw();
   bool isEmpty() const;
   size_t getSize() const;
-  void addCardToBottom(const Card &card); // สำหรับ Mulligan หรือสกิล
+  void addCardToBottom(const Card &card);
   std::optional<Card> removeCardByCodeName(const std::string &code_name_to_remove);
-  void addCardsToBottom(const std::vector<Card> &cards_to_add); // สำหรับ Mulligan
+  void addCardsToBottom(const std::vector<Card> &cards_to_add);
 
   void printDeckContents() const; // For Debugging
 };

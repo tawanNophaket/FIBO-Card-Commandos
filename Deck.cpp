@@ -81,6 +81,12 @@ void Deck::addCardToBottom(const Card &card)
   // std::cout << "เพิ่มการ์ด '" << card.getName() << "' ลงใต้เด็ค" << std::endl;
 }
 
+// เพิ่มการ์ดหลายใบเข้าไปใต้เด็ค
+void Deck::addCardsToBottom(const std::vector<Card> &cards_to_add)
+{
+  this->cards.insert(this->cards.begin(), cards_to_add.begin(), cards_to_add.end());
+}
+
 // ค้นหาและดึงการ์ดที่ระบุด้วย code_name ออกจากเด็ค
 std::optional<Card> Deck::removeCardByCodeName(const std::string &code_name_to_remove)
 {

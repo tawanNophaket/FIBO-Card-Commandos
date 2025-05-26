@@ -310,21 +310,6 @@ int main()
   Player player1(p1_name, Deck(full_card_list, deck_recipe_v1_3));
   Player player2(p2_name, Deck(full_card_list, deck_recipe_v1_3));
 
-  // --- Mulligan Phase ---
-  ClearScreen();
-  printSectionHeader("MULLIGAN PHASE", '~');
-  std::cout << player1.getName() << ", ตาคุณ Mulligan:" << std::endl;
-  player1.performMulligan();
-  std::cout << "(กด Enter เมื่อ " << player1.getName() << " Mulligan เสร็จ...)" << std::endl;
-  std::cin.get();
-  ClearScreen();
-
-  std::cout << player2.getName() << ", ตาคุณ Mulligan:" << std::endl;
-  player2.performMulligan();
-  std::cout << "(กด Enter เมื่อ " << player2.getName() << " Mulligan เสร็จ...)" << std::endl;
-  std::cin.get();
-  ClearScreen();
-
   player1.setupGame("G0-01");
   player2.setupGame("G0-01");
 

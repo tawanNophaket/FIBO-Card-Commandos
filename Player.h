@@ -66,7 +66,6 @@ public:
 
   // --- Setup & Mulligan ---
   bool setupGame(const std::string &starter_code_name, int initial_hand_size = 5);
-  void performMulligan(); // <<< เพิ่มเมธอด Mulligan
 
   // --- Turn Phases ---
   void performStandPhase();

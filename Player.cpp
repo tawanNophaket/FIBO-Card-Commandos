@@ -45,7 +45,7 @@ void Player::drawCards(int num_to_draw)
   }
 }
 
-// --- Setup & Mulligan ---
+// --- Setup ---
 bool Player::setupGame(const std::string &starter_code_name, int initial_hand_size)
 {
   std::optional<Card> starter_card_opt = deck.removeCardByCodeName(starter_code_name);
@@ -58,77 +58,6 @@ bool Player::setupGame(const std::string &starter_code_name, int initial_hand_si
   deck.shuffle();
   drawCards(initial_hand_size);
   return true;
-}
-
-void Player::performMulligan()
-{
-  // แสดงมือปัจจุบัน
-  std::cout << "\n--- " << name << ": MULLIGAN PHASE ---" << std::endl;
-  if (hand.empty())
-  {
-    std::cout << "ไม่มีการ์ดบนมือให้ Mulligan" << std::endl;
-    return;
-  }
-  displayHand(false); // แสดงมือแบบไม่ละเอียด
-
-  std::cout << "เลือกการ์ดที่คุณต้องการเปลี่ยน (ใส่หมายเลข คั่นด้วยเว้นวรรค, หรือพิมพ์ 'n' ถ้าไม่ต้องการเปลี่ยน): ";
-  std::string line;
-  std::getline(std::cin, line);
-
-  if (line == "n" || line == "N" || line.empty())
-  {
-    std::cout << name << " ไม่ทำการ Mulligan." << std::endl;
-    return;
-  }
-
-  std::stringstream ss(line);
-  std::vector<int> indices_to_mulligan;
-  int index;
-  while (ss >> index)
-  {
-    if (index >= 0 && static_cast<size_t>(index) < hand.size())
-    {
-      // ตรวจสอบว่า index ไม่ซ้ำ
-      if (std::find(indices_to_mulligan.begin(), indices_to_mulligan.end(), index) == indices_to_mulligan.end())
-      {
-        indices_to_mulligan.push_back(index);
-      }
-    }
-    else
-    {
-      std::cout << "หมายเลข " << index << " ไม่ถูกต้อง จะถูกข้ามไป." << std::endl;
-    }
-  }
-
-  if (indices_to_mulligan.empty())
-  {
-    std::cout << name << " ไม่ได้เลือกการ์ดสำหรับ Mulligan." << std::endl;
-    return;
-  }
-
-  // เรียง index จากมากไปน้อยเพื่อลบจาก vector ได้ถูกต้อง
-  std::sort(indices_to_mulligan.rbegin(), indices_to_mulligan.rend());
-
-  std::vector<Card> cards_returned_to_deck;
-  for (int idx : indices_to_mulligan)
-  {
-    cards_returned_to_deck.push_back(hand[static_cast<size_t>(idx)]);
-    hand.erase(hand.begin() + static_cast<size_t>(idx));
-  }
-
-  std::cout << name << " นำ " << cards_returned_to_deck.size() << " ใบกลับเข้าเด็ค: ";
-  for (const auto &c : cards_returned_to_deck)
-  {
-    std::cout << "[" << c.getName() << "] ";
-  }
-  std::cout << std::endl;
-
-  deck.addCardsToBottom(cards_returned_to_deck); // เพิ่มการ์ดกลับไปใต้เด็ค
-  deck.shuffle();                                // สับเด็คใหม่
-
-  std::cout << name << " จั่วการ์ดใหม่ " << cards_returned_to_deck.size() << " ใบ." << std::endl;
-  drawCards(cards_returned_to_deck.size()); // จั่วการ์ดเท่าจำนวนที่ใส่คืน
-  displayHand(false);
 }
 
 // --- Turn Phases ---
