@@ -1,7 +1,6 @@
-// Player.cpp - ไฟล์จัดการระบบผู้เล่น
+// Player_Improved.cpp - ไฟล์จัดการระบบผู้เล่นที่ปรับปรุงใหม่
 // ไฟล์นี้รับผิดชอบการจัดการทุกการกระทำของผู้เล่น เช่น การจั่วไพ่ การวางการ์ด การโจมตี
-// รวมถึงการแสดงผลสถานะต่างๆ ของผู้เล่นผ่านระบบ UI
-
+// รวมถึงการแสดงผลผ่านระบบ UI ที่ปรับปรุงใหม่เพื่อให้ใช้งานง่ายและสวยงามขึ้น
 #include "Player.h"
 #include <optional>
 #include "Card.h"
@@ -23,8 +22,7 @@ void Player::printDisplayLine(char c, int length)
 Player::Player(const std::string &player_name, Deck &&player_deck)
     : name(player_name), deck(std::move(player_deck)), turn_count(0)
 {
-  // เริ่มต้นให้ยูนิตทุกตัวอยู่ในสถานะยืน (Standing)
-  unit_is_standing.fill(true);
+  unit_is_standing.fill(true); // เริ่มต้นให้ทุกยูนิตอยู่ในสถานะยืน (Standing)
 }
 
 // ฟังก์ชันช่วยสำหรับจั่วการ์ดจำนวนที่กำหนด
@@ -67,7 +65,7 @@ bool Player::setupGame(const std::string &starter_code_name, int initial_hand_si
 // ทำให้ยูนิตทั้งหมดกลับมายืน (Stand Phase)
 void Player::performStandPhase()
 {
-  unit_is_standing.fill(true); // ทำให้ยูนิตทุกตัวกลับมายืน
+  unit_is_standing.fill(true);
 }
 
 // จั่วการ์ด 1 ใบในเฟสจั่ว (Draw Phase)
@@ -75,7 +73,7 @@ bool Player::performDrawPhase()
 {
   if (deck.isEmpty())
   {
-    return false; // สำรับหมด ไม่สามารถจั่วได้
+    return false;
   }
   drawCards(1);
   return true;
@@ -84,7 +82,7 @@ bool Player::performDrawPhase()
 // ไรด์การ์ดจากมือลงบน Vanguard Circle
 bool Player::rideFromHand(size_t hand_card_index)
 {
-  // ตรวจสอบความถูกต้องของดัชนีการ์ดบนมือ
+  // ตรวจสอบความถูกต้องของ index
   if (hand_card_index >= hand.size())
   {
     return false;
@@ -112,7 +110,7 @@ bool Player::rideFromHand(size_t hand_card_index)
 
   if (!can_ride)
   {
-    return false; // ไม่สามารถไรด์ได้ตามเงื่อนไข
+    return false;
   }
 
   // ย้าย vanguard เดิมลง soul (ถ้ามี)
@@ -131,59 +129,54 @@ bool Player::rideFromHand(size_t hand_card_index)
 // เรียกการ์ดจากมือลงบน Rear-guard Circle
 bool Player::callToRearGuard(size_t hand_card_index, size_t rc_slot_index)
 {
-  // ตรวจสอบความถูกต้องของตำแหน่งต่างๆ
+  // ตรวจสอบความถูกต้องของ indexes และเงื่อนไขต่างๆ
   if (hand_card_index >= hand.size())
   {
-    return false; // ดัชนีการ์ดบนมือไม่ถูกต้อง
+    return false;
   }
   if (rc_slot_index >= NUM_REAR_GUARD_CIRCLES)
   {
-    return false; // ตำแหน่ง rear-guard ไม่ถูกต้อง
+    return false;
   }
   if (rear_guard_circles[rc_slot_index].has_value())
   {
-    return false; // ตำแหน่งนี้มีการ์ดอยู่แล้ว
+    return false;
   }
-
   Card card_to_call = hand[hand_card_index];
-
-  // ตรวจสอบเงื่อนไขการเรียก
   if (!vanguard_circle.has_value())
   {
-    return false; // ต้องมี vanguard ก่อนจึงจะเรียก rear-guard ได้
+    return false;
   }
   if (card_to_call.getGrade() > vanguard_circle.value().getGrade())
   {
-    return false; // เกรดต้องไม่สูงกว่า vanguard
+    return false;
   }
-
-  // วางการ์ดลงในตำแหน่ง rear-guard
   rear_guard_circles[rc_slot_index] = card_to_call;
   unit_is_standing[getUnitStatusIndexForRC(rc_slot_index)] = true;
   hand.erase(hand.begin() + hand_card_index);
   return true;
 }
 
-// ขั้นตอนการต่อสู้ (Battle Phase)
-
-// เลือกยูนิตที่จะใช้โจมตี โดยแสดงรายการยูนิตที่สามารถโจมตีได้
+// เลือกยูนิตที่จะใช้โจมตี
 std::vector<std::pair<int, std::string>> Player::chooseAttacker()
 {
   std::vector<std::pair<int, std::string>> available_attackers;
 
-  // ตรวจสอบ Vanguard ว่าสามารถโจมตีได้หรือไม่
+  // ตรวจสอบ Vanguard
   if (vanguard_circle.has_value() && unit_is_standing[UNIT_STATUS_VC_IDX])
   {
+    // เพิ่ม Vanguard เข้าลิสต์ผู้โจมตีที่เป็นไปได้
     std::string vg_info = Icons::CROWN + " VC: " + vanguard_circle.value().getName() +
                           " (G" + std::to_string(vanguard_circle.value().getGrade()) +
                           " P:" + std::to_string(vanguard_circle.value().getPower()) + ")";
     available_attackers.push_back({UNIT_STATUS_VC_IDX, vg_info});
   }
 
-  // ตรวจสอบ Rear-guards แถวหน้าที่สามารถโจมตีได้
+  // ตรวจสอบ Rear-guards แถวหน้า
   const size_t front_row_rcs[] = {RC_FRONT_LEFT, RC_FRONT_RIGHT};
   for (size_t rc_idx : front_row_rcs)
   {
+    // เพิ่ม Rear-guards ที่ยังยืนอยู่เข้าลิสต์
     if (rear_guard_circles[rc_idx].has_value() && unit_is_standing[getUnitStatusIndexForRC(rc_idx)])
     {
       const Card &rc_card = rear_guard_circles[rc_idx].value();
@@ -214,11 +207,11 @@ std::vector<std::pair<int, std::string>> Player::chooseAttacker()
 // เลือก Booster สำหรับยูนิตที่โจมตี
 int Player::chooseBooster(int attacker_unit_status_idx)
 {
-  // ตรวจสอบความถูกต้องของยูนิตที่โจมตี
+  // ตรวจสอบความถูกต้องของตำแหน่งผู้โจมตี
   if (attacker_unit_status_idx == -1)
     return -1;
 
-  // ดึงข้อมูลการ์ดที่โจมตี
+  // ดึงข้อมูลการ์ดผู้โจมตี
   std::optional<Card> attacker_card = getUnitAtStatusIndex(attacker_unit_status_idx);
   if (!attacker_card.has_value())
     return -1;
@@ -230,23 +223,23 @@ int Player::chooseBooster(int attacker_unit_status_idx)
   // กำหนดตำแหน่ง booster ตามตำแหน่งผู้โจมตี
   if (attacker_unit_status_idx == UNIT_STATUS_VC_IDX)
   {
-    booster_rc_idx = RC_BACK_CENTER; // ถ้าผู้โจมตีเป็น Vanguard
+    booster_rc_idx = RC_BACK_CENTER; // ถ้าผู้โจมตีเป็น Vanguard, booster จะอยู่ตำแหน่งกลางแถวหลัง
   }
   else if (attacker_unit_status_idx == UNIT_STATUS_RC_FL_IDX)
   {
-    booster_rc_idx = RC_BACK_LEFT; // ถ้าผู้โจมตีอยู่ซ้ายแถวหน้า
+    booster_rc_idx = RC_BACK_LEFT; // ถ้าผู้โจมตีอยู่ซ้ายแถวหน้า, booster จะอยู่ซ้ายแถวหลัง
   }
   else if (attacker_unit_status_idx == UNIT_STATUS_RC_FR_IDX)
   {
-    booster_rc_idx = RC_BACK_RIGHT; // ถ้าผู้โจมตีอยู่ขวาแถวหน้า
+    booster_rc_idx = RC_BACK_RIGHT; // ถ้าผู้โจมตีอยู่ขวาแถวหน้า, booster จะอยู่ขวาแถวหลัง
   }
 
-  // ตรวจสอบคุณสมบัติของ booster
+  // ตรวจสอบว่ามี booster ที่ใช้ได้หรือไม่
   if (booster_rc_idx != static_cast<size_t>(-1))
   {
     potential_booster_status_idx = getUnitStatusIndexForRC(booster_rc_idx);
 
-    // ตรวจสอบเงื่อนไข:
+    // ตรวจสอบเงื่อนไขการ boost:
     // 1. มีการ์ดในตำแหน่ง booster
     // 2. การ์ดนั้นต้องยังยืนอยู่
     // 3. การ์ดนั้นต้องเป็นเกรด 0 หรือ 1
@@ -254,17 +247,16 @@ int Player::chooseBooster(int attacker_unit_status_idx)
         unit_is_standing[potential_booster_status_idx] &&
         (rear_guard_circles[booster_rc_idx].value().getGrade() <= 1))
     {
+      // แสดงข้อมูล booster ที่สามารถใช้ได้
       const Card &booster_card = rear_guard_circles[booster_rc_idx].value();
-      std::cout << Colors::BRIGHT_GREEN << Icons::MAGIC << " สามารถ Boost ผู้โจมตี ("
-                << attacker_card.value().getName() << ") ด้วย: " << Colors::RESET
-                << UIHelper::FormatCard(booster_card.getName(), booster_card.getGrade())
-                << Colors::CYAN << " (+" << booster_card.getPower() << " Power)" << Colors::RESET << std::endl;
+      // ...existing UI code...
       return potential_booster_status_idx;
     }
   }
-  return -1; // ไม่มี booster ที่เหมาะสม
+  return -1; // ไม่มี booster ที่ใช้ได้
 }
 
+// ทำให้ยูนิตในตำแหน่งที่ระบุหมุนตัว (Rest)
 void Player::restUnit(int unit_status_idx)
 {
   if (unit_status_idx >= 0 && static_cast<size_t>(unit_status_idx) < NUM_FIELD_UNITS)
@@ -273,6 +265,7 @@ void Player::restUnit(int unit_status_idx)
   }
 }
 
+// ตรวจสอบว่ายูนิตในตำแหน่งที่ระบุยังยืนอยู่หรือไม่
 bool Player::isUnitStanding(int unit_status_idx) const
 {
   if (unit_status_idx >= 0 && static_cast<size_t>(unit_status_idx) < NUM_FIELD_UNITS)
@@ -282,19 +275,23 @@ bool Player::isUnitStanding(int unit_status_idx) const
   return false;
 }
 
+// ดึงข้อมูลการ์ดจากตำแหน่งที่ระบุ
 std::optional<Card> Player::getUnitAtStatusIndex(int unit_status_idx) const
 {
+  // ถ้าเป็นตำแหน่ง Vanguard
   if (unit_status_idx == UNIT_STATUS_VC_IDX)
   {
     return vanguard_circle;
   }
+  // ถ้าเป็นตำแหน่ง Rear-guard
   else if (unit_status_idx > 0 && static_cast<size_t>(unit_status_idx - 1) < NUM_REAR_GUARD_CIRCLES)
   {
     return rear_guard_circles[static_cast<size_t>(unit_status_idx - 1)];
   }
-  return std::nullopt;
+  return std::nullopt; // ถ้าตำแหน่งไม่ถูกต้อง
 }
 
+// คำนวณพลังโจมตีรวมของยูนิต รวมถึง booster (ถ้ามี)
 int Player::getUnitPowerAtStatusIndex(int unit_status_idx, int booster_unit_status_idx, bool for_defense) const
 {
   int total_power = 0;
@@ -314,7 +311,11 @@ int Player::getUnitPowerAtStatusIndex(int unit_status_idx, int booster_unit_stat
   return total_power;
 }
 
-// ฟังก์ชันช่วยสำหรับการใช้ตรรกะของ Trigger
+// ฟังก์ชันช่วยสำหรับการประมวลผล Trigger
+// - self: ผู้เล่นที่เปิด trigger
+// - trigger_card: การ์ดที่เปิดได้
+// - is_drive_check: เป็นการเช็คจาก drive check หรือไม่
+// - opponent_for_heal_check: ผู้เล่นฝ่ายตรงข้าม (ใช้สำหรับเช็คเงื่อนไขการฮีล)
 TriggerOutput apply_trigger_logic_helper(Player *self, const Card &trigger_card, bool is_drive_check, Player *opponent_for_heal_check)
 {
   TriggerOutput output;
@@ -324,10 +325,10 @@ TriggerOutput apply_trigger_logic_helper(Player *self, const Card &trigger_card,
 
   if (trigger_card.getTypeRole() == "Trigger - Critical")
   {
-    output.extra_power += 10000;
+    output.extra_power += 10000; // เพิ่มพลังโจมตี 10000
     if (is_drive_check)
     {
-      output.extra_crit += 1;
+      output.extra_crit += 1; // เพิ่มคริติคอล 1 (เฉพาะ Drive Check)
       std::cout << Colors::BRIGHT_RED << Icons::CRITICAL << " ผล: +10000 Power และ +1 Critical!" << Colors::RESET << std::endl;
     }
     else
@@ -337,7 +338,8 @@ TriggerOutput apply_trigger_logic_helper(Player *self, const Card &trigger_card,
   }
   else if (trigger_card.getTypeRole() == "Trigger - Draw")
   {
-    output.extra_power += 10000;
+    output.extra_power += 10000; // เพิ่มพลังโจมตี 10000
+    // จั่วการ์ดเพิ่ม 1 ใบ
     std::optional<Card> drawn = self->getDeck().draw();
     if (drawn.has_value())
     {
@@ -348,8 +350,11 @@ TriggerOutput apply_trigger_logic_helper(Player *self, const Card &trigger_card,
   }
   else if (trigger_card.getTypeRole() == "Trigger - Heal")
   {
-    output.extra_power += 10000;
+    output.extra_power += 10000; // เพิ่มพลังโจมตี 10000
     std::cout << Colors::BRIGHT_GREEN << Icons::HEAL << " ผล: +10000 Power" << Colors::RESET;
+    // ตรวจสอบเงื่อนไขการฮีล:
+    // 1. ต้องมีดาเมจมากกว่าหรือเท่ากับฝ่ายตรงข้าม (ถ้ามีฝ่ายตรงข้าม)
+    // 2. ต้องมีดาเมจอย่างน้อย 1
     if (opponent_for_heal_check && self->getDamageCount() > 0 && self->getDamageCount() >= opponent_for_heal_check->getDamageCount())
     {
       if (self->healOneDamage())
@@ -374,30 +379,37 @@ TriggerOutput apply_trigger_logic_helper(Player *self, const Card &trigger_card,
   return output;
 }
 
-// Drive Check Phase
+// ทำการ Drive Check ตามจำนวนที่กำหนด
 TriggerOutput Player::performDriveCheck(int num_drives, Player *opponent_for_heal_check)
 {
+  // แสดงหัวข้อการ Drive Check
   UIHelper::PrintSectionHeader(name + ": DRIVE CHECK x" + std::to_string(num_drives), Icons::DIAMOND);
 
-  TriggerOutput total_trigger_output;
+  TriggerOutput total_trigger_output; // เก็บผลรวมของ trigger ทั้งหมด
+
+  // ทำการ Drive Check ตามจำนวนที่กำหนด
   for (int i = 0; i < num_drives; ++i)
   {
+    // ตรวจสอบว่ายังมีการ์ดเหลือในสำรับหรือไม่
     if (deck.isEmpty())
     {
       UIHelper::PrintError("เด็คหมด! ไม่สามารถ Drive Check ได้");
       break;
     }
 
+    // แสดงแอนิเมชันการ Drive Check
     UIHelper::ShowDriveCheckAnimation();
 
+    // จั่วการ์ดและแสดงผล
     std::optional<Card> drive_card_opt = deck.draw();
     if (drive_card_opt.has_value())
     {
       Card drive_card = drive_card_opt.value();
       std::cout << Colors::BRIGHT_CYAN << "Drive Check ครั้งที่ " << (i + 1) << ": "
                 << Colors::RESET << UIHelper::FormatCard(drive_card.getName(), drive_card.getGrade()) << std::endl;
-      hand.push_back(drive_card);
+      hand.push_back(drive_card); // เพิ่มการ์ดเข้ามือ
 
+      // ตรวจสอบว่าเป็นการ์ด Trigger หรือไม่
       if (drive_card.getTypeRole().find("Trigger") != std::string::npos)
       {
         TriggerOutput current_drive_trigger_output = apply_trigger_logic_helper(this, drive_card, true, opponent_for_heal_check);
@@ -409,7 +421,6 @@ TriggerOutput Player::performDriveCheck(int num_drives, Player *opponent_for_hea
   return total_trigger_output;
 }
 
-// Damage Check Phase
 TriggerOutput Player::handleDamageCheckTrigger(const Card &damage_card, Player *opponent_for_heal_check)
 {
   std::cout << Colors::BRIGHT_RED << name << " เปิดได้จากการ Damage Check: " << Colors::RESET
@@ -421,7 +432,6 @@ TriggerOutput Player::handleDamageCheckTrigger(const Card &damage_card, Player *
   return TriggerOutput();
 }
 
-// Heal Damage
 bool Player::healOneDamage()
 {
   if (!damage_zone.empty())
@@ -437,7 +447,6 @@ bool Player::healOneDamage()
   return false;
 }
 
-// เลือกยูนิตที่จะรับผลของ Trigger
 int Player::chooseUnitForTriggerEffect(const std::string &trigger_effect_description)
 {
   std::cout << Colors::BRIGHT_YELLOW << name << ": " << trigger_effect_description << Colors::RESET << std::endl;
@@ -477,7 +486,6 @@ int Player::chooseUnitForTriggerEffect(const std::string &trigger_effect_descrip
 }
 
 // --- Guarding Methods ---
-// เพิ่มการ์ดจากมือไปยัง Guardian Zone
 int Player::addCardToGuardianZoneFromHand(size_t hand_card_index)
 {
   if (hand_card_index >= hand.size())
@@ -496,7 +504,6 @@ int Player::addCardToGuardianZoneFromHand(size_t hand_card_index)
   return shield_value;
 }
 
-// คำนวณ Shield รวมใน Guardian Zone
 int Player::getGuardianZoneShieldTotal() const
 {
   int total_shield = 0;
@@ -507,17 +514,12 @@ int Player::getGuardianZoneShieldTotal() const
   return total_shield;
 }
 
-// ขั้นตอนการ Guard
 int Player::performGuardStep(int incoming_attack_power, const std::optional<Card> &target_unit_opt)
 {
-  // แสดงหัวข้อเฟส Guard
   UIHelper::PrintSectionHeader(name + ": GUARD PHASE", Icons::SHIELD, Colors::BRIGHT_BLUE);
 
-  // แสดงข้อมูลการโจมตีที่เข้ามา
   std::cout << Colors::BRIGHT_RED << Icons::SWORD << " พลังโจมตีที่เข้ามา: "
             << incoming_attack_power << Colors::RESET << std::endl;
-
-  // แสดงข้อมูลยูนิตเป้าหมาย (ถ้ามี)
   if (target_unit_opt.has_value())
   {
     std::cout << Colors::BRIGHT_YELLOW << Icons::TARGET << " เป้าหมายคือ: "
@@ -526,18 +528,16 @@ int Player::performGuardStep(int incoming_attack_power, const std::optional<Card
               << Colors::RESET << std::endl;
   }
 
-  // วนลูปให้ผู้เล่นเลือกการ์ดมา Guard จนกว่าจะพอใจ
   char continue_guard_choice = 'y';
+
   while ((continue_guard_choice == 'y' || continue_guard_choice == 'Y'))
   {
-    // ตรวจสอบว่ายังมีการ์ดบนมือเหลืออยู่หรือไม่
     if (hand.empty())
     {
       UIHelper::PrintWarning("ไม่เหลือการ์ดบนมือให้ Guard แล้ว!");
       break;
     }
 
-    // แสดงการ์ดบนมือและใน Guardian Zone
     std::cout << "\n"
               << Colors::BRIGHT_CYAN << Icons::HAND << " การ์ดบนมือของคุณ ("
               << name << "):" << Colors::RESET << std::endl;
@@ -547,18 +547,13 @@ int Player::performGuardStep(int incoming_attack_power, const std::optional<Card
     displayGuardianZone();
     std::cout << std::endl;
 
-    // แสดง Shield รวมปัจจุบัน
     std::cout << Colors::BRIGHT_BLUE << Icons::SHIELD << " Shield รวมปัจจุบัน: "
               << getGuardianZoneShieldTotal() << Colors::RESET << std::endl;
 
-    // รับการเลือกการ์ดจากผู้เล่น
-    std::cout << Colors::BRIGHT_CYAN
-              << "เลือกการ์ดจากมือเพื่อ Guard (-1 เพื่อหยุด Guard): " << Colors::RESET;
+    std::cout << Colors::BRIGHT_CYAN << "เลือกการ์ดจากมือเพื่อ Guard (-1 เพื่อหยุด Guard): " << Colors::RESET;
     std::string s_idx;
     std::cin >> s_idx;
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-    // แปลงข้อมูลที่รับมาเป็นตัวเลข
     int card_idx = -1;
     try
     {
@@ -566,14 +561,12 @@ int Player::performGuardStep(int incoming_attack_power, const std::optional<Card
     }
     catch (...)
     {
-      card_idx = -2; // ข้อมูลไม่ถูกต้อง
+      card_idx = -2; /* invalid input */
     }
 
-    // ตรวจสอบการเลือก
     if (card_idx == -1)
-      break; // ผู้เล่นเลือกจบการ Guard
+      break;
 
-    // ถ้าเลือกการ์ดถูกต้อง ดำเนินการ Guard
     if (card_idx >= 0 && static_cast<size_t>(card_idx) < hand.size())
     {
       addCardToGuardianZoneFromHand(static_cast<size_t>(card_idx));
@@ -583,48 +576,39 @@ int Player::performGuardStep(int incoming_attack_power, const std::optional<Card
       UIHelper::PrintError("เลือกไม่ถูกต้อง");
     }
 
-    // ตรวจสอบว่ายังมีการ์ดเหลือหรือไม่
     if (hand.empty())
     {
       UIHelper::PrintWarning("ไม่เหลือการ์ดบนมือให้ Guard แล้ว!");
       break;
     }
 
-    // ถามว่าต้องการ Guard เพิ่มหรือไม่
     std::cout << Colors::BRIGHT_CYAN << "ต้องการ Guard เพิ่มหรือไม่ (y/n): " << Colors::RESET;
     std::cin >> continue_guard_choice;
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
   }
 
-  // สรุปผลการ Guard
   int final_shield = getGuardianZoneShieldTotal();
-  std::cout << Colors::BRIGHT_GREEN << Icons::CONFIRM
-            << " จบขั้นตอนการ Guard. Shield ที่ได้ทั้งหมด: "
+  std::cout << Colors::BRIGHT_GREEN << Icons::CONFIRM << " จบขั้นตอนการ Guard. Shield ที่ได้ทั้งหมด: "
             << final_shield << Colors::RESET << std::endl;
   return final_shield;
 }
 
-// แสดงผล Guardian Zone
 void Player::displayGuardianZone() const
 {
-  // ถ้าไม่มีการ์ดใน Guardian Zone
   if (guardian_zone.empty())
   {
     std::cout << Colors::BRIGHT_BLACK << "(ว่าง)" << Colors::RESET;
   }
   else
   {
-    // แสดงการ์ดแต่ละใบพร้อมค่า Shield
     for (const auto &card : guardian_zone)
     {
-      std::cout << Colors::BLUE << "[" << card.getName()
-                << " S:" << card.getShield() << "] " << Colors::RESET;
+      std::cout << Colors::BLUE << "[" << card.getName() << " S:" << card.getShield() << "] " << Colors::RESET;
     }
   }
 }
 
-// แสดงผลสนามของผู้เล่น
-// show_opponent_field_for_targeting: true ถ้าต้องการแสดงตัวเลขเพื่อเลือกเป้าหมาย
+// Enhanced field display
 std::string formatCardForDisplayImproved(const std::optional<Card> &card_opt, int width, bool is_standing)
 {
   std::ostringstream oss;
@@ -639,9 +623,9 @@ std::string formatCardForDisplayImproved(const std::optional<Card> &card_opt, in
 
     // Safe truncation for Unicode/Thai/emoji
     std::string name_trunc;
-    int max_display_width = 8; // Maximum display width we want
-    int display_width = 0;     // Current display width
-    size_t byte_pos = 0;       // Current byte position in name_str
+    int max_display_width = 12; // Maximum display width we want
+    int display_width = 0;      // Current display width
+    size_t byte_pos = 0;        // Current byte position in name_str
 
     while (byte_pos < name_str.length())
     {
@@ -683,9 +667,7 @@ std::string formatCardForDisplayImproved(const std::optional<Card> &card_opt, in
 
       // Check if adding this character would exceed max width
       if (display_width + char_width > max_display_width)
-      {
         break;
-      }
 
       // Safe to append this character
       if (byte_pos + char_bytes <= name_str.length())
@@ -827,8 +809,6 @@ void Player::displayField(bool show_opponent_field_for_targeting) const
   UIHelper::PrintHorizontalLine('=', 70, Colors::CYAN);
 }
 
-// แสดงผลมือของผู้เล่น
-// show_details: true ถ้าต้องการแสดงค่าพลังโจมตีและป้องกันด้วย
 void Player::displayHand(bool show_details) const
 {
   UIHelper::PrintHorizontalLine('-', 40, Colors::YELLOW);
@@ -856,26 +836,24 @@ void Player::displayHand(bool show_details) const
 }
 
 // Getters
-std::string Player::getName() const { return name; }                                                                        // ดึงชื่อผู้เล่น
-size_t Player::getHandSize() const { return hand.size(); }                                                                  // ดึงจำนวนการ์ดบนมือ
-const std::vector<Card> &Player::getHand() const { return hand; }                                                           // ดึงการ์ดบนมือทั้งหมด
-size_t Player::getDamageCount() const { return damage_zone.size(); }                                                        // ดึงจำนวนดาเมจ
-const std::optional<Card> &Player::getVanguard() const { return vanguard_circle; }                                          // ดึงการ์ด Vanguard
-const std::array<std::optional<Card>, NUM_REAR_GUARD_CIRCLES> &Player::getRearGuards() const { return rear_guard_circles; } // ดึงการ์ด Rear-guards
-Deck &Player::getDeck() { return deck; }                                                                                    // ดึงสำรับไพ่ (แบบแก้ไขได้)
-const Deck &Player::getDeck() const { return deck; }                                                                        // ดึงสำรับไพ่ (แบบอ่านอย่างเดียว)
+std::string Player::getName() const { return name; }
+size_t Player::getHandSize() const { return hand.size(); }
+const std::vector<Card> &Player::getHand() const { return hand; }
+size_t Player::getDamageCount() const { return damage_zone.size(); }
+const std::optional<Card> &Player::getVanguard() const { return vanguard_circle; }
+const std::array<std::optional<Card>, NUM_REAR_GUARD_CIRCLES> &Player::getRearGuards() const { return rear_guard_circles; }
+Deck &Player::getDeck() { return deck; }
+const Deck &Player::getDeck() const { return deck; }
 
-// แสดงสถานะทั้งหมดของผู้เล่น
 void Player::displayFullStatus() const
 {
-  UIHelper::ClearScreen();                                             // ล้างหน้าจอ
-  UIHelper::PrintSectionHeader("FULL STATUS: " + name, Icons::PLAYER); // แสดงหัวข้อ
-  displayField();                                                      // แสดงสนาม
-  displayHand(true);                                                   // แสดงการ์ดบนมือพร้อมรายละเอียด
-  MenuSystem::WaitForKeyPress();                                       // รอกดปุ่มก่อนดำเนินการต่อ
+  UIHelper::ClearScreen();
+  UIHelper::PrintSectionHeader("FULL STATUS: " + name, Icons::PLAYER);
+  displayField();
+  displayHand(true);
+  MenuSystem::WaitForKeyPress();
 }
 
-// รับดาเมจ
 void Player::takeDamage(const Card &damage_card)
 {
   UIHelper::ShowDamageAnimation();
@@ -891,13 +869,11 @@ void Player::takeDamage(const Card &damage_card)
   }
 }
 
-// เพิ่มการ์ดลงมือ
 void Player::addCardToHand(const Card &card)
 {
   hand.push_back(card);
 }
 
-// ล้าง Guardian Zone และย้ายการ์ดไป Drop Zone
 void Player::clearGuardianZoneAndMoveToDrop()
 {
   if (!guardian_zone.empty())
@@ -912,7 +888,6 @@ void Player::clearGuardianZoneAndMoveToDrop()
   }
 }
 
-// ทิ้งการ์ดจากมือไป Drop Zone
 void Player::discardFromHandToDrop(size_t hand_card_index)
 {
   if (hand_card_index < hand.size())
@@ -925,7 +900,6 @@ void Player::discardFromHandToDrop(size_t hand_card_index)
   }
 }
 
-// วางการ์ดลง Soul
 void Player::placeCardIntoSoul(const Card &card)
 {
   soul.push_back(card);
