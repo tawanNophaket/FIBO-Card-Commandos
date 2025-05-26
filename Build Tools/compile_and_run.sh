@@ -5,10 +5,10 @@ echo "🔧 Compiling FIBO Card Commandos..."
 
 # Compile the improved version with all new UI files
 g++ -std=c++17 -Wall -Wextra -O2 \
-    main_improved.cpp \
+    Main.cpp \
     Card.cpp \
     Deck.cpp \
-    Player_Improved.cpp \
+    Player.cpp \
     UIHelper.cpp \
     MenuSystem.cpp \
     -o fibo_card_commandos

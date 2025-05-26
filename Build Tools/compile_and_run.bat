@@ -8,10 +8,10 @@ cd /d "%~dp0\.."
 
 REM Compile with correct file paths
 g++ -std=c++17 -Wall -Wextra -O2 ^
-    "Game Core\main_improved.cpp" ^
+    "Game Core\Main.cpp" ^
     "Game Core\Card.cpp" ^
     "Game Core\Deck.cpp" ^
-    "Game Core\Player_Improved.cpp" ^
+    "Game Core\Player.cpp" ^
     "UI System\UIHelper.cpp" ^
     "UI System\MenuSystem.cpp" ^
     -I"Game Core" ^

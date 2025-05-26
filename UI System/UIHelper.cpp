@@ -1,4 +1,5 @@
-// UIHelper.cpp - Implementation ของ UI Helper functions
+// UIHelper.cpp - การดำเนินการของฟังก์ชันช่วยเหลือสำหรับการแสดงผล
+// ไฟล์นี้มีฟังก์ชันสำหรับจัดการการแสดงผลต่างๆ เช่น การล้างหน้าจอ การวาดกรอบ และการแสดงผลพิเศษ
 #include "UIHelper.h"
 #include <iostream>
 #include <iomanip>
@@ -14,7 +15,9 @@
 
 using namespace std;
 
-// Screen Management
+// การจัดการหน้าจอ (Screen Management)
+// ClearScreen - ล้างหน้าจอเทอร์มินัล
+// รองรับทั้งระบบ Windows และ Unix-like
 void UIHelper::ClearScreen()
 {
 #ifdef _WIN32
@@ -38,6 +41,8 @@ void UIHelper::ClearScreen()
 #endif
 }
 
+// PauseForUser - หยุดรอการกดปุ่มจากผู้ใช้
+// - message: ข้อความที่จะแสดงระหว่างรอ
 void UIHelper::PauseForUser(const string &message)
 {
   cout << "\n"
@@ -45,6 +50,9 @@ void UIHelper::PauseForUser(const string &message)
   cin.get();
 }
 
+// ShowLoadingAnimation - แสดงแอนิเมชันโหลด
+// - message: ข้อความที่จะแสดงระหว่างโหลด
+// - duration_ms: ระยะเวลาในการแสดงแอนิเมชัน (มิลลิวินาที)
 void UIHelper::ShowLoadingAnimation(const string &message, int duration_ms)
 {
   cout << "\n"
@@ -63,31 +71,46 @@ void UIHelper::ShowLoadingAnimation(const string &message, int duration_ms)
   cout << "\b " << Icons::CONFIRM << Colors::RESET << endl;
 }
 
-// Helper function to repeat a character n times
-string UIHelper::RepeatChar(char c, int n) {
-    return string(n, c);
+// ฟังก์ชันช่วยเหลือสำหรับการทำซ้ำตัวอักษร (Helper functions for character repetition)
+// RepeatChar - สร้างสตริงจากการทำซ้ำตัวอักษรหรือสตริง
+// - c: ตัวอักษรที่ต้องการทำซ้ำ
+// - s: สตริงที่ต้องการทำซ้ำ (สำหรับตัวอักษรหลายไบต์)
+// - n: จำนวนครั้งที่ต้องการทำซ้ำ
+string UIHelper::RepeatChar(char c, int n)
+{
+  return string(n, c);
 }
 
-// Helper function to repeat a string n times (used for multi-byte characters like box drawing)
-string UIHelper::RepeatChar(const string& s, int n) {
-    string result = "";
-    for (int i = 0; i < n; ++i) {
-        result += s;
-    }
-    return result;
+string UIHelper::RepeatChar(const string &s, int n)
+{
+  string result = "";
+  for (int i = 0; i < n; ++i)
+  {
+    result += s;
+  }
+  return result;
 }
 
-// Box Drawing
+// การวาดกรอบและเส้น (Box Drawing)
+// PrintHorizontalLine - วาดเส้นแนวนอน
+// - c: ตัวอักษรหรือสตริงที่ใช้วาดเส้น
+// - length: ความยาวของเส้น
+// - color: สีของเส้น
 void UIHelper::PrintHorizontalLine(char c, int length, const string &color)
 {
   cout << color << RepeatChar(c, length) << Colors::RESET << endl;
 }
 
-void UIHelper::PrintHorizontalLine(const string& s, int length, const string &color)
+void UIHelper::PrintHorizontalLine(const string &s, int length, const string &color)
 {
-    cout << color << RepeatChar(s, length) << Colors::RESET << endl;
+  cout << color << RepeatChar(s, length) << Colors::RESET << endl;
 }
 
+// PrintBox - วาดกรอบสี่เหลี่ยมพร้อมเนื้อหาและหัวข้อ
+// - content: เนื้อหาที่จะแสดงในกรอบ
+// - title: หัวข้อของกรอบ
+// - border_color: สีของกรอบ
+// - text_color: สีของข้อความ
 void UIHelper::PrintBox(const string &content, const string &title,
                         const string &border_color, const string &text_color)
 {
@@ -147,10 +170,13 @@ void UIHelper::PrintPhaseHeader(const string &phase_name, const string &player_n
   PrintHorizontalLine("─", 70, color);
   int display_width_header = GetDisplayWidth(full_header);
   int padding = (70 - display_width_header) / 2;
-  if (padding > 0) {
-      cout << color << RepeatChar(' ', padding) << Colors::BOLD << full_header << Colors::RESET << endl;
-  } else {
-      cout << color << Colors::BOLD << full_header << Colors::RESET << endl;
+  if (padding > 0)
+  {
+    cout << color << RepeatChar(' ', padding) << Colors::BOLD << full_header << Colors::RESET << endl;
+  }
+  else
+  {
+    cout << color << Colors::BOLD << full_header << Colors::RESET << endl;
   }
   PrintHorizontalLine("─", 70, color);
 }
@@ -190,7 +216,7 @@ void UIHelper::PrintGameTitle()
   cout << "███████ ██ ██████   ██████      ██████  █████  ██████  ██████  " << endl;
   cout << "██      ██ ██   ██ ██    ██    ██      ██   ██ ██   ██ ██   ██ " << endl;
   cout << "█████   ██ ██████  ██    ██    ██      ███████ ██████  ██   ██ " << endl;
-  cout << "██      ██ ██   ██ ██    ██    ██      ██   ██ ██   ██ ██   ██ " << endl;
+  cout << "██      ██ ██   ██ ██    ██    ██    ██      ██   ██ ██   ██ " << endl;
   cout << "██      ██ ██████   ██████      ██████ ██   ██ ██   ██ ██████  " << endl;
   cout << Colors::RESET;
   PrintHorizontalLine("█", 70, Colors::BRIGHT_MAGENTA);
@@ -232,10 +258,12 @@ void UIHelper::PrintProgressBar(int current, int max_val, const string &label)
   int empty = bar_width - filled;
 
   cout << label << " [";
-  if (filled > 0) {
+  if (filled > 0)
+  {
     cout << Colors::GREEN << RepeatChar("█", filled);
   }
-  if (empty > 0) {
+  if (empty > 0)
+  {
     cout << Colors::BRIGHT_BLACK << RepeatChar("░", empty);
   }
   cout << "] " << current << "/" << max_val << " (" << (int)(progress * 100) << "%)" << endl;
@@ -359,74 +387,91 @@ void UIHelper::PrintCardPreview(const std::string &name, int grade, int power, i
   std::string grade_str = "Grade: " + GetGradeIcon(grade) + " " + std::to_string(grade);
   std::string type_str = "Type: " + type;
   std::cout << Colors::CYAN << "│ " << Colors::RESET << grade_str;
-  std::cout << RepeatChar(' ', preview_width - GetDisplayWidth(Colors::CYAN + "│ " + Colors::RESET + grade_str + RepeatChar(' ',1) + type_str + Colors::CYAN + "│")) << type_str << " " << Colors::CYAN << "│" << std::endl;
+  std::cout << RepeatChar(' ', preview_width - GetDisplayWidth(Colors::CYAN + "│ " + Colors::RESET + grade_str + RepeatChar(' ', 1) + type_str + Colors::CYAN + "│")) << type_str << " " << Colors::CYAN << "│" << std::endl;
 
   std::string power_str = "Power: " + Colors::GREEN + std::to_string(power) + Colors::RESET;
   std::string shield_str = "Shield: " + Colors::BLUE + std::to_string(shield) + Colors::RESET;
   std::cout << Colors::CYAN << "│ " << Colors::RESET << power_str;
-  std::cout << RepeatChar(' ', preview_width - GetDisplayWidth(Colors::CYAN + "│ " + Colors::RESET + power_str + RepeatChar(' ',1) + shield_str + Colors::CYAN + "│")) << shield_str << " " << Colors::CYAN << "│" << std::endl;
+  std::cout << RepeatChar(' ', preview_width - GetDisplayWidth(Colors::CYAN + "│ " + Colors::RESET + power_str + RepeatChar(' ', 1) + shield_str + Colors::CYAN + "│")) << shield_str << " " << Colors::CYAN << "│" << std::endl;
 
   std::string critical_str = "Critical: " + Colors::RED + std::to_string(critical) + Colors::RESET;
   std::cout << Colors::CYAN << "│ " << Colors::RESET << critical_str << RepeatChar(' ', preview_width - GetDisplayWidth(Colors::CYAN + "│ " + Colors::RESET + critical_str + Colors::CYAN + "│")) << Colors::CYAN << "│" << std::endl;
 
-  if (!skill.empty() && skill != "-") {
+  if (!skill.empty() && skill != "-")
+  {
     PrintHorizontalLine("·", preview_width, Colors::BRIGHT_BLACK);
     std::string skill_label = Colors::YELLOW + Icons::MAGIC + " Skill: " + Colors::RESET;
     std::string current_skill_text = skill;
     bool first_line_of_skill = true;
 
-    while (!current_skill_text.empty()) {
-        std::cout << Colors::CYAN << "│ " << Colors::RESET;
-        std::string line_prefix;
-        if (first_line_of_skill) {
-            line_prefix = skill_label;
-            std::cout << line_prefix;
-        } else {
-            line_prefix = RepeatChar(' ', GetDisplayWidth(skill_label));
-            std::cout << line_prefix; // Indent subsequent lines
+    while (!current_skill_text.empty())
+    {
+      std::cout << Colors::CYAN << "│ " << Colors::RESET;
+      std::string line_prefix;
+      if (first_line_of_skill)
+      {
+        line_prefix = skill_label;
+        std::cout << line_prefix;
+      }
+      else
+      {
+        line_prefix = RepeatChar(' ', GetDisplayWidth(skill_label));
+        std::cout << line_prefix; // Indent subsequent lines
+      }
+
+      int available_display_width = preview_width - GetDisplayWidth(Colors::CYAN + "│ " + Colors::RESET + line_prefix + Colors::CYAN + "│");
+
+      std::string segment_to_print;
+      // int chars_can_fit_approx = available_display_width; // Approximation (REMOVED as unused)
+
+      if (GetDisplayWidth(current_skill_text) <= available_display_width)
+      {
+        segment_to_print = current_skill_text;
+        current_skill_text.clear();
+      }
+      else
+      {
+        // Iterate to find how many actual characters fit
+        int actual_chars_fit = 0;
+        for (size_t i = 0; i < current_skill_text.length(); ++i)
+        { // Changed i to size_t
+          if (GetDisplayWidth(current_skill_text.substr(0, i + 1)) <= available_display_width)
+          {
+            actual_chars_fit = i + 1;
+          }
+          else
+          {
+            break;
+          }
+        }
+        // Try to break at a space if possible within actual_chars_fit
+        int break_at = -1;
+        // Ensure actual_chars_fit -1 is not negative before loop
+        for (int i = actual_chars_fit > 0 ? actual_chars_fit - 1 : 0; i >= 0; --i)
+        {
+          if (static_cast<size_t>(i) < current_skill_text.length() && current_skill_text[static_cast<size_t>(i)] == ' ')
+          {
+            break_at = i;
+            break;
+          }
         }
 
-        int available_display_width = preview_width - GetDisplayWidth(Colors::CYAN + "│ " + Colors::RESET + line_prefix + Colors::CYAN + "│");
-        
-        std::string segment_to_print;
-        // int chars_can_fit_approx = available_display_width; // Approximation (REMOVED as unused)
-        
-        if (GetDisplayWidth(current_skill_text) <= available_display_width) {
-            segment_to_print = current_skill_text;
-            current_skill_text.clear();
-        } else {
-            // Iterate to find how many actual characters fit
-            int actual_chars_fit = 0;
-            for (size_t i = 0; i < current_skill_text.length(); ++i) { // Changed i to size_t
-                if (GetDisplayWidth(current_skill_text.substr(0, i + 1)) <= available_display_width) {
-                    actual_chars_fit = i + 1;
-                } else {
-                    break;
-                }
-            }
-            // Try to break at a space if possible within actual_chars_fit
-            int break_at = -1;
-            // Ensure actual_chars_fit -1 is not negative before loop
-            for (int i = actual_chars_fit > 0 ? actual_chars_fit - 1 : 0; i >=0; --i) { 
-                if (static_cast<size_t>(i) < current_skill_text.length() && current_skill_text[static_cast<size_t>(i)] == ' ') {
-                    break_at = i;
-                    break;
-                }
-            }
-
-            if (break_at != -1) {
-                segment_to_print = current_skill_text.substr(0, break_at);
-                current_skill_text = current_skill_text.substr(break_at + 1); // Skip space
-            } else { // No space, or word is too long, so break at actual_chars_fit
-                segment_to_print = current_skill_text.substr(0, actual_chars_fit);
-                current_skill_text = current_skill_text.substr(actual_chars_fit);
-            }
+        if (break_at != -1)
+        {
+          segment_to_print = current_skill_text.substr(0, break_at);
+          current_skill_text = current_skill_text.substr(break_at + 1); // Skip space
         }
-        std::cout << segment_to_print;
-        // Calculate padding for the right side of the current line
-        int current_line_content_display_width = GetDisplayWidth(line_prefix + segment_to_print);
-        std::cout << RepeatChar(' ', preview_width - GetDisplayWidth(Colors::CYAN + "│ " + Colors::RESET) - current_line_content_display_width - GetDisplayWidth(Colors::CYAN + "│")) << Colors::CYAN << "│" << std::endl;
-        first_line_of_skill = false;
+        else
+        { // No space, or word is too long, so break at actual_chars_fit
+          segment_to_print = current_skill_text.substr(0, actual_chars_fit);
+          current_skill_text = current_skill_text.substr(actual_chars_fit);
+        }
+      }
+      std::cout << segment_to_print;
+      // Calculate padding for the right side of the current line
+      int current_line_content_display_width = GetDisplayWidth(line_prefix + segment_to_print);
+      std::cout << RepeatChar(' ', preview_width - GetDisplayWidth(Colors::CYAN + "│ " + Colors::RESET) - current_line_content_display_width - GetDisplayWidth(Colors::CYAN + "│")) << Colors::CYAN << "│" << std::endl;
+      first_line_of_skill = false;
     } // End of while loop for skill wrapping
   } // End of if skill not empty
   PrintHorizontalLine("─", preview_width, Colors::CYAN);
@@ -479,12 +524,15 @@ int UIHelper::GetDisplayWidth(const std::string &str)
     // More robust check for wide characters, this is still a simplification
     // and might not be perfect for all Unicode characters or terminals.
     // For truly accurate width, a library like wcwidth() is needed, but not standard in C++ Windows without specific setup.
-    if (wc > 127) { // A very basic check: if not ASCII, assume width 2. This is often incorrect.
-                    // The previous complex check had issues with compiler warnings about always true/false comparisons.
-                    // This simplification might lead to misalignments for some characters.
-        width += 2;
-    } else {
-        width += 1;
+    if (wc > 127)
+    { // A very basic check: if not ASCII, assume width 2. This is often incorrect.
+      // The previous complex check had issues with compiler warnings about always true/false comparisons.
+      // This simplification might lead to misalignments for some characters.
+      width += 2;
+    }
+    else
+    {
+      width += 1;
     }
     i += bytes;
   }

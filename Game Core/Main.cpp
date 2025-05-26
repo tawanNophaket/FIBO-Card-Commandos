@@ -1,28 +1,36 @@
-// main_improved.cpp - Main file ที่ปรับปรุงแล้วด้วย UI/UX ใหม่
+// Main.cpp - ไฟล์หลักของเกม
+// รับผิดชอบการทำงานหลักของเกม การโหลดข้อมูล และการควบคุมการเล่น
+
 #include <iostream>
-#include <fstream>
-#include <vector>
-#include <string>
-#include <map>
-#include <optional>
-#include <limits>
-#include <iomanip>
-#include <thread>
-#include <chrono>
+#include <fstream>  // สำหรับอ่านไฟล์
+#include <vector>   // สำหรับเก็บข้อมูลแบบรายการ
+#include <string>   // สำหรับจัดการข้อความ
+#include <map>      // สำหรับเก็บข้อมูลแบบ key-value
+#include <optional> // สำหรับค่าที่อาจจะมีหรือไม่มีก็ได้
+#include <limits>   // สำหรับค่าขีดจำกัดต่างๆ
+#include <iomanip>  // สำหรับจัดรูปแบบการแสดงผล
+#include <thread>   // สำหรับการทำงานแบบหลายเธรด
+#include <chrono>   // สำหรับจับเวลาและหน่วงเวลา
 #include "Card.h"
 #include "Deck.h"
 #include "Player.h"
 #include "../UI System/UIHelper.h"
 #include "MenuSystem.h"
-#include "json.hpp"
+#include "../Library/json.hpp" // สำหรับอ่านไฟล์ JSON
 
 using json = nlohmann::json;
 using namespace std;
 
-// --- Helper Functions ---
+// --- ฟังก์ชันช่วยต่างๆ ---
+
+// โหลดข้อมูลการ์ดจากไฟล์ JSON
+// filename: ชื่อไฟล์ที่จะโหลด
+// คืนค่า: vector ของการ์ดทั้งหมดที่โหลดได้
 vector<Card> loadCardsFromJson(const string &filename)
 {
   vector<Card> all_cards;
+
+  // พยายามเปิดไฟล์
   ifstream file_stream(filename);
   if (!file_stream.is_open())
   {
@@ -30,6 +38,7 @@ vector<Card> loadCardsFromJson(const string &filename)
     return all_cards;
   }
 
+  // พยายามแปลง JSON
   json card_data_json;
   try
   {
@@ -43,24 +52,28 @@ vector<Card> loadCardsFromJson(const string &filename)
   }
   file_stream.close();
 
+  // ตรวจสอบรูปแบบข้อมูล JSON
   if (!card_data_json.is_array())
   {
     UIHelper::PrintError("ข้อมูล JSON ไม่ได้อยู่ในรูปแบบ Array");
     return all_cards;
   }
 
+  // แปลงข้อมูล JSON เป็นออบเจ็กต์การ์ด
   for (const auto &obj : card_data_json)
   {
     try
     {
-      all_cards.emplace_back(obj.value("code_name", "N/A"),
-                             obj.value("name", "Unknown"),
-                             obj.value("grade", -1),
-                             obj.value("power", 0),
-                             obj.value("shield", 0),
-                             obj.value("skill_description", ""),
-                             obj.value("type_role", "Unknown"),
-                             obj.value("critical", 1));
+      all_cards.emplace_back(
+          obj.value("code_name", "N/A"),      // รหัสการ์ด
+          obj.value("name", "Unknown"),       // ชื่อการ์ด
+          obj.value("grade", -1),             // เกรด
+          obj.value("power", 0),              // พลังโจมตี
+          obj.value("shield", 0),             // ค่าป้องกัน
+          obj.value("skill_description", ""), // คำอธิบายสกิล
+          obj.value("type_role", "Unknown"),  // ประเภท/บทบาท
+          obj.value("critical", 1)            // ค่าคริติคอล
+      );
     }
     catch (json::type_error &e)
     {
@@ -72,23 +85,33 @@ vector<Card> loadCardsFromJson(const string &filename)
   return all_cards;
 }
 
+// เลือกเป้าหมายการโจมตีจากฝ่ายตรงข้าม
+// attacker: ผู้เล่นที่กำลังโจมตี
+// defender: ผู้เล่นที่กำลังป้องกัน
+// คืนค่า: ดัชนีของยูนิตที่ถูกเลือกเป็นเป้าหมาย
 int chooseTargetFromOpponent(Player *attacker, Player *defender)
 {
   UIHelper::ClearScreen();
   UIHelper::PrintSectionHeader("เลือกเป้าหมายการโจมตี", Icons::TARGET);
 
+  // แสดงสนามของทั้งสองฝ่าย
   attacker->displayField();
   cout << "\n"
        << Colors::BRIGHT_RED << "--- สนามของฝ่ายป้องกัน ("
        << defender->getName() << ") ---" << Colors::RESET << "\n";
   defender->displayField(true);
 
+  // รวบรวมเป้าหมายที่สามารถโจมตีได้
   vector<pair<int, string>> available_targets;
+
+  // เพิ่ม Vanguard เป็นเป้าหมาย (ถ้ามี)
   if (defender->getVanguard().has_value())
   {
-    available_targets.push_back({UNIT_STATUS_VC_IDX, Icons::CROWN + " VC: " + defender->getVanguard().value().getName()});
+    available_targets.push_back({UNIT_STATUS_VC_IDX,
+                                 Icons::CROWN + " VC: " + defender->getVanguard().value().getName()});
   }
 
+  // เพิ่ม Rear-guards แถวหน้าเป็นเป้าหมาย
   const auto &opp_rcs = defender->getRearGuards();
   const size_t opp_front_row_rcs_indices[] = {RC_FRONT_LEFT, RC_FRONT_RIGHT};
   for (size_t rc_idx : opp_front_row_rcs_indices)
@@ -101,6 +124,7 @@ int chooseTargetFromOpponent(Player *attacker, Player *defender)
     }
   }
 
+  // ถ้าไม่มีเป้าหมายให้โจมตี
   if (available_targets.empty())
   {
     UIHelper::PrintError("ฝ่ายตรงข้ามไม่มียูนิตให้โจมตี!");
@@ -108,6 +132,7 @@ int chooseTargetFromOpponent(Player *attacker, Player *defender)
     return -1;
   }
 
+  // แสดงเป้าหมายที่โจมตีได้
   cout << "\n"
        << Colors::BRIGHT_YELLOW << Icons::TARGET << " เป้าหมายที่โจมตีได้:" << Colors::RESET << "\n";
   for (size_t i = 0; i < available_targets.size(); ++i)
@@ -115,10 +140,14 @@ int chooseTargetFromOpponent(Player *attacker, Player *defender)
     cout << Colors::CYAN << "[" << i << "] " << Colors::RESET << available_targets[i].second << "\n";
   }
 
+  // รับค่าการเลือกเป้าหมายจากผู้เล่น
   int choice_idx = MenuSystem::GetIntegerInput("เลือกหมายเลขเป้าหมาย: ", 0, available_targets.size() - 1);
   return available_targets[static_cast<size_t>(choice_idx)].first;
 }
 
+// ดำเนินการใน Ride Phase
+// current_player: ผู้เล่นที่กำลังเล่น
+// คืนค่า: true ถ้าผู้เล่นต้องการออกจากเกม, false ถ้าไม่ต้องการ
 bool performRidePhase(Player *current_player)
 {
   while (true)
@@ -157,6 +186,9 @@ bool performRidePhase(Player *current_player)
   }
 }
 
+// ดำเนินการใน Main Phase
+// current_player: ผู้เล่นที่กำลังเล่น
+// คืนค่า: true ถ้าผู้เล่นต้องการออกจากเกม, false ถ้าไม่ต้องการ
 bool performMainPhase(Player *current_player)
 {
   while (true)
@@ -230,6 +262,11 @@ bool performMainPhase(Player *current_player)
   }
 }
 
+// ดำเนินการใน Battle Phase
+// current_player: ผู้เล่นที่กำลังเล่น
+// opponent_player: ผู้เล่นฝ่ายตรงข้าม
+// game_over: ตัวแปรที่บอกว่าเกมจบหรือไม่
+// คืนค่า: true ถ้าผู้เล่นต้องการออกจากเกม, false ถ้าไม่ต้องการ
 bool performBattlePhase(Player *current_player, Player *opponent_player, bool &game_over)
 {
   current_player->clearGuardianZoneAndMoveToDrop();
@@ -431,9 +468,10 @@ bool performBattlePhase(Player *current_player, Player *opponent_player, bool &g
   }
 }
 
+// ฟังก์ชันหลักของโปรแกรม
 int main()
 {
-  // Game Start
+  // เริ่มเกม
   MenuResult start_result = MenuSystem::ShowGameStartMenu();
 
   if (start_result.should_exit || start_result.selected_key == "3")
@@ -448,7 +486,7 @@ int main()
     return main(); // Restart
   }
 
-  // Load cards
+  // โหลดข้อมูลการ์ด
   UIHelper::ClearScreen();
   UIHelper::ShowLoadingAnimation("กำลังโหลดข้อมูลการ์ด...", 1500);
 
@@ -460,13 +498,13 @@ int main()
     return 1;
   }
 
-  // Get player names
+  // รับชื่อผู้เล่น
   UIHelper::ClearScreen();
   UIHelper::PrintSectionHeader("PLAYER SETUP", Icons::PLAYER);
   string p1_name = MenuSystem::GetPlayerName("👤 ใส่ชื่อผู้เล่น 1: ");
   string p2_name = MenuSystem::GetPlayerName("👤 ใส่ชื่อผู้เล่น 2: ");
 
-  // Create decks and players
+  // สร้างเด็คและผู้เล่น
   map<string, int> deck_recipe_v1_3 = {
       {"G0-01", 1}, {"G0-02", 4}, {"G0-03", 4}, {"G0-04", 8}, {"G1-01", 3}, {"G1-02", 4}, {"G1-03", 3}, {"G1-04", 2}, {"G1-05", 1}, {"G2-01", 3}, {"G2-02", 3}, {"G2-03", 3}, {"G2-04", 2}, {"G3-01", 2}, {"G3-02", 2}, {"G3-03", 2}, {"G3-04", 2}, {"G4-01", 1}};
 
@@ -475,14 +513,14 @@ int main()
   Player player1(p1_name, Deck(full_card_list, deck_recipe_v1_3));
   Player player2(p2_name, Deck(full_card_list, deck_recipe_v1_3));
 
-  // Setup game
+  // ตั้งค่าเกม
   if (!player1.setupGame("G0-01") || !player2.setupGame("G0-01"))
   {
     UIHelper::PrintError("ไม่สามารถตั้งค่าเกมได้");
     return 1;
   }
 
-  // Choose first player
+  // เลือกผู้เล่นคนแรก
   UIHelper::ClearScreen();
   UIHelper::PrintSectionHeader("GAME START", Icons::CONFIRM);
   cout << Colors::BRIGHT_CYAN << "ใครจะเริ่มเล่นก่อน?" << Colors::RESET << "\n";
@@ -497,7 +535,7 @@ int main()
   UIHelper::PrintSuccess(currentPlayer->getName() + " ได้เริ่มเล่นก่อน!");
   MenuSystem::WaitForKeyPress("กด Enter เพื่อเริ่มเกม...");
 
-  // Main game loop
+  // วนลูปหลักของเกม
   int turn_count = 0;
   bool game_over = false;
   bool should_exit = false;
@@ -506,7 +544,7 @@ int main()
   {
     turn_count++;
 
-    // Turn Start
+    // เริ่มเทิร์น
     MenuSystem::ShowTurnStartScreen(currentPlayer, turn_count);
 
     // Stand Phase
@@ -540,7 +578,7 @@ int main()
     currentPlayer->clearGuardianZoneAndMoveToDrop();
     opponentPlayer->clearGuardianZoneAndMoveToDrop();
 
-    // Check win conditions
+    // ตรวจสอบเงื่อนไขการชนะ
     if (currentPlayer->getDamageCount() >= 6 || opponentPlayer->getDamageCount() >= 6)
     {
       Player *winner = (currentPlayer->getDamageCount() < 6) ? currentPlayer : opponentPlayer;
@@ -553,7 +591,7 @@ int main()
     UIHelper::PrintInfo("เทิร์นของ " + currentPlayer->getName() + " สิ้นสุด");
     MenuSystem::WaitForKeyPress("กด Enter เพื่อให้ผู้เล่นถัดไปเริ่มเทิร์น...");
 
-    // Switch players
+    // สลับผู้เล่น
     swap(currentPlayer, opponentPlayer);
   }
 

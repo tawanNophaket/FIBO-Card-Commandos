@@ -1,23 +1,25 @@
-# Makefile for FIBO Card Commandos (แก้ไขแล้ว)
+# Makefile สำหรับ FIBO Card Commandos
+# ไฟล์นี้ใช้สำหรับการคอมไพล์และรันเกม
 
-# Compiler settings
-CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -O2
-TARGET = fibo_card_commandos
+# การตั้งค่าคอมไพเลอร์
+CXX = g++                                    # เลือกใช้ g++ เป็นคอมไพเลอร์
+CXXFLAGS = -std=c++17 -Wall -Wextra -O2     # ตั้งค่า flags สำหรับการคอมไพล์
+TARGET = fibo_card_commandos                 # ชื่อไฟล์เป้าหมายที่จะสร้าง
 
-# Source files with correct paths
-GAME_CORE_DIR = Game\ Core
-UI_SYSTEM_DIR = UI\ System
-DATA_DIR = Data
+# ไดเรกทอรีของซอร์สโค้ด
+GAME_CORE_DIR = Game\ Core                   # โฟลเดอร์เก็บโค้ดหลักของเกม
+UI_SYSTEM_DIR = UI\ System                   # โฟลเดอร์เก็บโค้ดส่วน UI
+DATA_DIR = Data                              # โฟลเดอร์เก็บข้อมูล
 
-SOURCES = $(GAME_CORE_DIR)/main_improved.cpp \
+# รายชื่อไฟล์ซอร์สโค้ด
+SOURCES = $(GAME_CORE_DIR)/Main.cpp \
           $(GAME_CORE_DIR)/Card.cpp \
           $(GAME_CORE_DIR)/Deck.cpp \
-          $(GAME_CORE_DIR)/Player_Improved.cpp \
+          $(GAME_CORE_DIR)/Player.cpp \
           $(UI_SYSTEM_DIR)/UIHelper.cpp \
           $(UI_SYSTEM_DIR)/MenuSystem.cpp
 
-# Headers
+# รายชื่อไฟล์ส่วนหัว
 HEADERS = $(GAME_CORE_DIR)/Card.h \
           $(GAME_CORE_DIR)/Deck.h \
           $(GAME_CORE_DIR)/Player.h \
@@ -25,28 +27,28 @@ HEADERS = $(GAME_CORE_DIR)/Card.h \
           $(UI_SYSTEM_DIR)/MenuSystem.h \
           json.hpp
 
-# Include directories
+# ไดเรกทอรีที่ต้องรวมเข้าไป
 INCLUDES = -I"$(GAME_CORE_DIR)" -I"$(UI_SYSTEM_DIR)" -I.
 
-# Default target
+# เป้าหมายหลัก
 all: $(TARGET)
 
-# Build target
+# การสร้างไฟล์เป้าหมาย
 $(TARGET): $(SOURCES) $(HEADERS)
-	@echo "🔧 Compiling FIBO Card Commandos..."
+	@echo "🔧 กำลังคอมไพล์ FIBO Card Commandos..."
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $(SOURCES) -o $(TARGET)
-	@echo "✅ Compilation successful!"
+	@echo "✅ คอมไพล์สำเร็จ!"
 	@cp "$(DATA_DIR)/cards.json" "cards.json" 2>/dev/null || true
 
-# Run the game
+# รันเกม
 run: $(TARGET)
-	@echo "🚀 Starting FIBO Card Commandos..."
+	@echo "🚀 กำลังเริ่มเกม FIBO Card Commandos..."
 	@echo ""
 	./$(TARGET)
 
-# Clean build files
+# ล้างไฟล์ที่สร้างจากการ build
 clean:
-	@echo "🧹 Cleaning build files..."
+	@echo "🧹 กำลังล้างไฟล์ build..."
 	rm -f $(TARGET) $(TARGET).exe cards.json
 
 # Debug build

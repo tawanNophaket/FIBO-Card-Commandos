@@ -1,4 +1,5 @@
-// MenuSystem.cpp - Implementation ของระบบเมนู
+// MenuSystem.cpp - การดำเนินการของระบบเมนู
+// ไฟล์นี้ประกอบด้วยการทำงานของระบบเมนูทั้งหมด รวมถึงการแสดงผล การรับข้อมูล และการจัดการการโต้ตอบกับผู้เล่น
 #include "MenuSystem.h"
 #include "UIHelper.h"
 #include <iostream>
@@ -8,7 +9,12 @@
 
 using namespace std;
 
-// Private Helper Functions
+// ฟังก์ชันช่วยเหลือภายใน (Private Helper Functions)
+
+// GetUserInput - รับข้อมูลจากผู้ใช้พร้อมแสดงสถานะผู้เล่น
+// - prompt: ข้อความที่จะแสดงเพื่อขอข้อมูล
+// - clear_screen: ต้องการล้างหน้าจอก่อนแสดงหรือไม่
+// - player_for_display: ข้อมูลผู้เล่นที่ต้องการแสดงสถานะ
 string MenuSystem::GetUserInput(const string &prompt, bool clear_screen, Player *player_for_display)
 {
   if (clear_screen)
@@ -33,6 +39,9 @@ string MenuSystem::GetUserInput(const string &prompt, bool clear_screen, Player 
   return input;
 }
 
+// DisplayMenuHeader - แสดงส่วนหัวของเมนู
+// - title: ชื่อเมนู
+// - subtitle: ข้อความอธิบายเพิ่มเติม (ถ้ามี)
 void MenuSystem::DisplayMenuHeader(const string &title, const string &subtitle)
 {
   UIHelper::PrintSectionHeader(title, Icons::MENU, Colors::BRIGHT_CYAN);
@@ -42,6 +51,7 @@ void MenuSystem::DisplayMenuHeader(const string &title, const string &subtitle)
   }
 }
 
+// DisplayMenuFooter - แสดงส่วนท้ายของเมนูพร้อมคำแนะนำการใช้งานลัด
 void MenuSystem::DisplayMenuFooter()
 {
   cout << "\n";
@@ -50,6 +60,12 @@ void MenuSystem::DisplayMenuFooter()
 }
 
 // Core Menu Functions
+
+// ShowMenu - แสดงเมนูและรับการเลือกจากผู้เล่น
+// - title: ชื่อเมนู
+// - options: รายการตัวเลือกในเมนู
+// - subtitle: ข้อความอธิบายเพิ่มเติม
+// - player_context: ข้อมูลผู้เล่นที่ต้องการแสดงสถานะ
 MenuResult MenuSystem::ShowMenu(const string &title, const vector<MenuOption> &options,
                                 const string &subtitle, Player *player_context)
 {
@@ -308,7 +324,7 @@ int MenuSystem::GetCardSelectionFromHand(Player *player, const string &action_na
   return GetIntegerInput(prompt, min_val, max_val, player);
 }
 
-int MenuSystem::GetRCPositionSelection(const std::string & /*action_name*/ )
+int MenuSystem::GetRCPositionSelection(const std::string & /*action_name*/)
 {
   UIHelper::PrintInfo("เลือกตำแหน่ง Rear Guard Circle:");
   cout << Colors::CYAN << "[0] FL (Front Left)   [1] FR (Front Right)" << Colors::RESET << "\n";
