@@ -45,7 +45,7 @@ void MenuSystem::DisplayMenuHeader(const string &title, const string &subtitle)
 void MenuSystem::DisplayMenuFooter()
 {
   cout << "\n";
-  UIHelper::PrintHorizontalLine('─', 70, Colors::BRIGHT_BLACK);
+  UIHelper::PrintHorizontalLine("─", 70, Colors::BRIGHT_BLACK);
   UIHelper::PrintShortcuts();
 }
 
@@ -308,7 +308,7 @@ int MenuSystem::GetCardSelectionFromHand(Player *player, const string &action_na
   return GetIntegerInput(prompt, min_val, max_val, player);
 }
 
-int MenuSystem::GetRCPositionSelection(const string &action_name)
+int MenuSystem::GetRCPositionSelection(const std::string & /*action_name*/ )
 {
   UIHelper::PrintInfo("เลือกตำแหน่ง Rear Guard Circle:");
   cout << Colors::CYAN << "[0] FL (Front Left)   [1] FR (Front Right)" << Colors::RESET << "\n";
@@ -401,6 +401,24 @@ void MenuSystem::ShowCardDetails(const Card &card)
                              card.getShield(), card.getCritical(),
                              card.getSkillDescription(), card.getTypeRole());
   WaitForKeyPress();
+}
+
+void MenuSystem::ShowFieldOverview(Player *player1, Player *player2, Player *current_player)
+{
+  UIHelper::ClearScreen();
+  UIHelper::PrintSectionHeader("FIELD OVERVIEW", Icons::FIELD);
+  // Show current player's field
+  cout << Colors::BRIGHT_CYAN << "=== " << current_player->getName() << " (Your Field) ===" << Colors::RESET << "\n";
+  current_player->displayField();
+  // Show opponent's field if provided
+  if (player1 && player2)
+  {
+    Player *opponent = (current_player == player1) ? player2 : player1;
+    cout << "\n"
+         << Colors::BRIGHT_RED << "=== " << opponent->getName() << " (Opponent Field) ===" << Colors::RESET << "\n";
+    opponent->displayField();
+  }
+  WaitForKeyPress("กด Enter เพื่อกลับ...");
 }
 
 void MenuSystem::ShowGameHelp(const string &current_phase)
@@ -509,7 +527,7 @@ void MenuSystem::ShowTurnStartScreen(Player *current_player, int turn_number)
 // Utility Functions
 void MenuSystem::WaitForKeyPress(const string &message)
 {
-  UIHelper::PauseForUser(message);
+  UIHelper::PauseForUser(message.empty() ? "กด Enter เพื่อดำเนินการต่อ..." : message);
 }
 
 string MenuSystem::FormatMenuOption(const MenuOption &option, int index, bool numbered)
@@ -597,7 +615,7 @@ int MenuSystem::GetIntegerInput(const string &prompt, int min_val, int max_val, 
   }
 }
 
-char MenuSystem::GetCharInput(const string &prompt, const string &valid_chars, Player *player_context)
+char MenuSystem::GetCharInput(const std::string &prompt, const std::string &valid_chars, [[maybe_unused]] Player *player_context)
 {
   string input;
 

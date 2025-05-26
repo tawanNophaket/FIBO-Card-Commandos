@@ -110,6 +110,7 @@ public:
 
   // Box Drawing
   static void PrintHorizontalLine(char c = '=', int length = 70, const std::string &color = Colors::CYAN);
+  static void PrintHorizontalLine(const std::string& s, int length, const std::string &color = Colors::CYAN);
   static void PrintBox(const std::string &content, const std::string &title = "",
                        const std::string &border_color = Colors::CYAN,
                        const std::string &text_color = Colors::WHITE);
@@ -153,6 +154,13 @@ public:
                                int critical, const std::string &skill, const std::string &type);
   static void PrintBattleStats(const std::string &attacker_name, int attack_power, int critical,
                                const std::string &defender_name, int defense_power);
+
+  static int GetDisplayWidth(const std::string &str);
+
+private:
+  static std::string RepeatChar(char c, int n);
+  static std::string RepeatChar(wchar_t wc, int n);
+  static std::string RepeatChar(const std::string& s, int n);
 };
 
 #endif // UIHELPER_H

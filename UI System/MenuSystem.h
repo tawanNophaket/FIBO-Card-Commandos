@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 #include <functional>
-#include "Player.h"
+#include "../Game Core/Player.h"
 
 // Menu Option Structure
 struct MenuOption

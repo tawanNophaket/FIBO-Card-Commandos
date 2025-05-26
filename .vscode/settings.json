@@ -62,6 +62,9 @@
     "valarray": "cpp",
     "variant": "cpp",
     "chrono": "cpp",
-    "cstdarg": "cpp"
+    "cstdarg": "cpp",
+    "semaphore": "cpp",
+    "stop_token": "cpp",
+    "thread": "cpp"
   }
 }

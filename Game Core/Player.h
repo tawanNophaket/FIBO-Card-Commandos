@@ -1,4 +1,4 @@
-// Player.h - ไฟล์ Header สำหรับคลาส Player
+// Player.h - ไฟล์ Header สำหรับคลาส Player (แก้ไขแล้ว)
 #ifndef PLAYER_H
 #define PLAYER_H
 
@@ -25,8 +25,15 @@ constexpr size_t UNIT_STATUS_RC_BC_IDX = RC_BACK_CENTER + 1;
 constexpr size_t UNIT_STATUS_RC_BR_IDX = RC_BACK_RIGHT + 1;
 const int NUM_FIELD_UNITS = 1 + NUM_REAR_GUARD_CIRCLES;
 
+// แก้ไข TriggerOutput struct ให้ตรงกับการใช้งานใน Player_Improved.cpp
 struct TriggerOutput
 {
+  int extra_power = 0;
+  int extra_crit = 0;
+  bool card_drawn = false;
+  bool damage_healed = false;
+
+  // เก็บ legacy fields ไว้เผื่อใช้ในอนาคต
   int power_to_chosen_unit = 0;
   int crit_to_chosen_unit = 0;
   int chosen_unit_status_idx = -1;
@@ -37,6 +44,7 @@ class Player
 private:
   std::string name;
   Deck deck;
+  int turn_count;
 
   std::vector<Card> hand;
   std::optional<Card> vanguard_circle;
@@ -78,22 +86,17 @@ public:
   bool isUnitStanding(int unit_status_idx) const;
   std::optional<Card> getUnitAtStatusIndex(int unit_status_idx) const;
   int getUnitPowerAtStatusIndex(int unit_status_idx, int booster_unit_status_idx = -1, bool for_defense = false) const;
-  int getUnitCriticalAtStatusIndex(int unit_status_idx) const;
 
-  TriggerOutput applyTriggerEffect(const Card &trigger_card, bool is_drive_check, Player *opponent_for_heal_check, int unit_for_power_crit_idx);
-  TriggerOutput performDriveCheck(int num_drives, Player *opponent_for_heal_check, int attacking_vg_idx);
-  int chooseUnitForTriggerEffect(const std::string &trigger_effect_description, bool can_choose_any_unit = true);
+  // แก้ไขฟังก์ชัน Trigger ให้ตรงกับการใช้งาน
+  TriggerOutput performDriveCheck(int num_drives, Player *opponent_for_heal_check);
+  TriggerOutput handleDamageCheckTrigger(const Card &damage_card, Player *opponent_for_heal_check);
+  int chooseUnitForTriggerEffect(const std::string &trigger_effect_description);
   bool healOneDamage();
-  void resetBattleBuffs();
 
   // --- Guarding & Intercept ---
-  // คืนค่า shield ที่เพิ่ม หรือ 999999 ถ้า PG ทำงาน, -1 ถ้า error
-  int addCardToGuardianZoneFromHand(size_t hand_card_index, bool &perfect_guarded_flag);
+  int addCardToGuardianZoneFromHand(size_t hand_card_index);
   int getGuardianZoneShieldTotal() const;
-  // คืนค่า Shield รวมที่ได้จากการ Guard และ Intercept ทั้งหมด, ตั้ง perfect_guarded_flag ถ้า PG ทำงาน
-  int performGuardStep(int incoming_attack_power, const std::optional<Card> &target_unit_opt, Player *attacker, bool &out_perfect_guarded_flag);
-  // เพิ่มเมธอดสำหรับ Intercept โดยเฉพาะ, คืนค่า shield ที่ได้
-  int performIntercept(size_t rc_slot_idx_to_intercept);
+  int performGuardStep(int incoming_attack_power, const std::optional<Card> &target_unit_opt);
 
   bool rideFromHand(size_t hand_card_index);
   bool callToRearGuard(size_t hand_card_index, size_t rc_slot_index);
@@ -105,7 +108,7 @@ public:
 
   std::string getName() const;
   size_t getHandSize() const;
-  const std::vector<Card> &getHand() const; // เพื่อให้ main.cpp สามารถวน loop และแสดงมือได้
+  const std::vector<Card> &getHand() const;
   size_t getDamageCount() const;
   const std::optional<Card> &getVanguard() const;
   const std::array<std::optional<Card>, NUM_REAR_GUARD_CIRCLES> &getRearGuards() const;
@@ -113,9 +116,11 @@ public:
   const Deck &getDeck() const;
 
   void takeDamage(const Card &damage_card);
-  void placeCardIntoSoul(const Card &card); // ตรวจสอบว่าถูกเรียกใช้ถูกต้อง
+  void placeCardIntoSoul(const Card &card);
   void discardFromHandToDrop(size_t hand_card_index);
   void clearGuardianZoneAndMoveToDrop();
+
+  void addCardToHand(const Card &card);
 };
 
 #endif // PLAYER_H

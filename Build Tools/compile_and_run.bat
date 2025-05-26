@@ -1,19 +1,37 @@
 @echo off
-REM compile_and_run.bat - Windows script สำหรับ compile และรันเกม
+REM compile_and_run.bat - Windows script สำหรับ compile และรันเกม (แก้ไขแล้ว)
 
 echo 🔧 Compiling FIBO Card Commandos...
 
-REM Compile the improved version with all new UI files
-g++ -std=c++17 -Wall -Wextra -O2 main_improved.cpp Card.cpp Deck.cpp Player_Improved.cpp UIHelper.cpp MenuSystem.cpp -o fibo_card_commandos.exe
+REM Navigate to project root and compile with correct paths
+cd /d "%~dp0\.."
+
+REM Compile with correct file paths
+g++ -std=c++17 -Wall -Wextra -O2 ^
+    "Game Core\main_improved.cpp" ^
+    "Game Core\Card.cpp" ^
+    "Game Core\Deck.cpp" ^
+    "Game Core\Player_Improved.cpp" ^
+    "UI System\UIHelper.cpp" ^
+    "UI System\MenuSystem.cpp" ^
+    -I"Game Core" ^
+    -I"UI System" ^
+    -I. ^
+    -o fibo_card_commandos.exe
 
 REM Check if compilation was successful
 if %errorlevel% == 0 (
     echo ✅ Compilation successful!
     echo 🚀 Starting FIBO Card Commandos...
     echo.
+
+    REM Copy cards.json to working directory
+    copy "Data\cards.json" "cards.json" >nul 2>&1
+
     fibo_card_commandos.exe
 ) else (
     echo ❌ Compilation failed!
+    echo Check that all source files exist and g++ is installed
     pause
     exit /b 1
 )

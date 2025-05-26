@@ -1,6 +1,9 @@
 // Player_Improved.cpp - ปรับปรุง Player.cpp ด้วย UI ใหม่
 #include "Player.h"
-#include "UIHelper.h"
+#include <optional>
+#include "Card.h"
+#include "../UI System/UIHelper.h"
+#include "../UI System/MenuSystem.h"
 #include <iostream>
 #include <algorithm>
 #include <iomanip>
@@ -15,7 +18,7 @@ void Player::printDisplayLine(char c, int length)
 
 // Constructor
 Player::Player(const std::string &player_name, Deck &&player_deck)
-    : name(player_name), deck(std::move(player_deck))
+    : name(player_name), deck(std::move(player_deck)), turn_count(0)
 {
   unit_is_standing.fill(true);
 }
@@ -285,7 +288,7 @@ TriggerOutput apply_trigger_logic_helper(Player *self, const Card &trigger_card,
     std::optional<Card> drawn = self->getDeck().draw();
     if (drawn.has_value())
     {
-      self->hand.push_back(drawn.value());
+      self->addCardToHand(drawn.value());
       std::cout << Colors::BRIGHT_CYAN << Icons::DRAW << " ผล: +10000 Power และ จั่ว 1 ใบ!" << Colors::RESET << std::endl;
       output.card_drawn = true;
     }
@@ -540,7 +543,7 @@ void Player::displayGuardianZone() const
 }
 
 // Enhanced field display
-std::string formatCardForDisplayImproved(const std::optional<Card> &card_opt, int width, bool is_standing, bool is_vc)
+std::string formatCardForDisplayImproved(const std::optional<Card> &card_opt, int width, bool is_standing)
 {
   std::ostringstream oss;
   std::string content;
@@ -552,83 +555,169 @@ std::string formatCardForDisplayImproved(const std::optional<Card> &card_opt, in
     std::string name_str = card.getName();
     std::string power_str = "P:" + std::to_string(card.getPower());
 
-    // Truncate name if too long
-    if (name_str.length() > 8)
+    // Safe truncation for Unicode/Thai/emoji
+    std::string name_trunc;
+    int max_display_width = 8; // Maximum display width we want
+    int display_width = 0;     // Current display width
+    size_t byte_pos = 0;       // Current byte position in name_str
+
+    while (byte_pos < name_str.length())
     {
-      name_str = name_str.substr(0, 8) + "..";
+      // Get next character width
+      unsigned char c = name_str[byte_pos];
+      int char_width;
+      size_t char_bytes;
+
+      if ((c & 0x80) == 0)
+      {
+        // ASCII
+        char_width = 1;
+        char_bytes = 1;
+      }
+      else if ((c & 0xE0) == 0xC0)
+      {
+        // 2-byte UTF-8
+        char_width = 2;
+        char_bytes = 2;
+      }
+      else if ((c & 0xF0) == 0xE0)
+      {
+        // 3-byte UTF-8 (Thai, etc)
+        char_width = 2;
+        char_bytes = 3;
+      }
+      else if ((c & 0xF8) == 0xF0)
+      {
+        // 4-byte UTF-8 (emoji)
+        char_width = 2;
+        char_bytes = 4;
+      }
+      else
+      {
+        // Invalid UTF-8, skip
+        byte_pos++;
+        continue;
+      }
+
+      // Check if adding this character would exceed max width
+      if (display_width + char_width > max_display_width)
+      {
+        break;
+      }
+
+      // Safe to append this character
+      if (byte_pos + char_bytes <= name_str.length())
+      {
+        name_trunc.append(name_str.substr(byte_pos, char_bytes));
+        display_width += char_width;
+      }
+
+      byte_pos += char_bytes;
     }
 
-    content = grade_icon + " " + name_str + " " + power_str + " " + status_icon;
+    // Add truncation indicator if necessary
+    if (byte_pos < name_str.length() && !name_trunc.empty())
+    {
+      name_trunc += "..";
+    }
+    else if (name_trunc.empty())
+    {
+      name_trunc = "??";
+    }
+
+    content = grade_icon + " " + name_trunc + " " + power_str + " " + status_icon;
   }
   else
   {
     content = Colors::BRIGHT_BLACK + "[     ว่าง     ]" + Colors::RESET;
   }
 
-  int text_len = content.length();
+  // Calculate actual display width including color codes
+  std::string stripped_content = content;
+  size_t pos = 0;
+  while ((pos = stripped_content.find("\033[", pos)) != std::string::npos)
+  {
+    size_t end_pos = stripped_content.find('m', pos);
+    if (end_pos != std::string::npos)
+    {
+      stripped_content.erase(pos, end_pos - pos + 1);
+    }
+  }
+
+  int text_len = UIHelper::GetDisplayWidth(stripped_content);
   int padding = width - text_len;
   if (padding < 0)
     padding = 0;
   int pad_left = padding / 2;
   int pad_right = padding - pad_left;
+
   oss << std::string(pad_left, ' ') << content << std::string(pad_right, ' ');
   return oss.str();
 }
 
 void Player::displayField(bool show_opponent_field_for_targeting) const
 {
-  const int card_cell_width = 24;
-  const std::string V_BORDER = Colors::CYAN + "│" + Colors::RESET;
-  const std::string H_BORDER_THIN_SEGMENT = Colors::CYAN + std::string(card_cell_width, '─') + Colors::RESET;
-  const std::string H_BORDER_THICK_SEGMENT = Colors::BRIGHT_CYAN + std::string(card_cell_width, '═') + Colors::RESET;
-  const std::string CORNER = Colors::CYAN + "┌" + Colors::RESET;
+  const int card_cell_width = 15; // Width for each card cell
+  const std::string V_BORDER = Colors::BRIGHT_BLACK + "│" + Colors::RESET;
+  const std::string H_BORDER_THICK_SEGMENT = Colors::BRIGHT_BLACK + std::string(card_cell_width, '=') + Colors::RESET;
+  const std::string H_BORDER_THIN_SEGMENT = Colors::BRIGHT_BLACK + std::string(card_cell_width, '-') + Colors::RESET;
 
-  std::cout << "\n"
-            << Colors::BRIGHT_MAGENTA << Icons::FIELD << " สนามของ: "
-            << Colors::BOLD << name << Colors::RESET << std::endl;
+  // Player Name and Deck/Soul/Drop
+  std::cout << Colors::BOLD << Colors::YELLOW << name << Colors::RESET << " - Turn "
+            << Colors::BOLD << turn_count << Colors::RESET << std::endl;
 
-  // Status line with colors
-  std::cout << Colors::YELLOW << Icons::HAND << " มือ: " << Colors::BOLD << hand.size() << Colors::RESET
-            << " │ " << Colors::BLUE << Icons::DECK << " เด็ค: " << Colors::BOLD << deck.getSize() << Colors::RESET
-            << " │ " << Colors::RED << Icons::DAMAGE << " ดาเมจ: " << Colors::BOLD << damage_zone.size() << "/6" << Colors::RESET
-            << " │ " << Colors::MAGENTA << Icons::SOUL << " โซล: " << Colors::BOLD << soul.size() << Colors::RESET
-            << " │ " << Colors::BRIGHT_BLACK << Icons::DROP << " ดรอป: " << Colors::BOLD << drop_zone.size() << Colors::RESET << std::endl;
+  std::cout << "  " << Colors::CYAN << "┌" << H_BORDER_THICK_SEGMENT << "┬" << H_BORDER_THIN_SEGMENT
+            << "┬" << H_BORDER_THIN_SEGMENT << "┐" << Colors::RESET << std::endl;
 
-  UIHelper::PrintHorizontalLine('─', 70, Colors::CYAN);
-
-  // Front row
-  std::cout << Colors::BRIGHT_CYAN << "  แถวหน้า:" << Colors::RESET << std::endl;
-  std::cout << "  " << Colors::CYAN << "┌" << std::string(card_cell_width, '─') << "┬"
-            << std::string(card_cell_width, '═') << "┬" << std::string(card_cell_width, '─')
-            << "┐" << Colors::RESET << std::endl;
-
-  std::cout << "  " << V_BORDER << formatCardForDisplayImproved(rear_guard_circles[RC_FRONT_LEFT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_FRONT_LEFT)])
-            << V_BORDER << formatCardForDisplayImproved(vanguard_circle, card_cell_width, unit_is_standing[UNIT_STATUS_VC_IDX], true)
-            << V_BORDER << formatCardForDisplayImproved(rear_guard_circles[RC_FRONT_RIGHT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_FRONT_RIGHT)])
+  std::cout << "  " << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ')
+            << (Colors::GREEN + Icons::DECK + " Deck: " + Colors::BOLD + std::to_string(deck.getSize()) + Colors::RESET)
+            << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ')
+            << (Colors::MAGENTA + Icons::SOUL + " Soul: " + Colors::BOLD + std::to_string(soul.size()) + Colors::RESET)
+            << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ')
+            << (Colors::BRIGHT_BLACK + Icons::DROP + " Drop: " + Colors::BOLD + std::to_string(drop_zone.size()) + Colors::RESET)
             << V_BORDER << std::endl;
 
+  // Field Separator (Top)
+  std::cout << "  " << Colors::CYAN << "├" << H_BORDER_THIN_SEGMENT << "┼" << H_BORDER_THICK_SEGMENT
+            << "┼" << H_BORDER_THIN_SEGMENT << "┤" << Colors::RESET << std::endl;
+
+  // Front Row Cards
+  std::cout << "  " << V_BORDER << formatCardForDisplayImproved(rear_guard_circles[RC_FRONT_LEFT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_FRONT_LEFT)])
+            << V_BORDER << formatCardForDisplayImproved(vanguard_circle, card_cell_width, unit_is_standing[UNIT_STATUS_VC_IDX])
+            << V_BORDER << formatCardForDisplayImproved(rear_guard_circles[RC_FRONT_RIGHT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_FRONT_RIGHT)])
+            << V_BORDER << " " << Colors::RED << Icons::DAMAGE << " Damage: " << Colors::BOLD << damage_zone.size() << "/6" << Colors::RESET << std::endl;
+
+  // Front Row Labels
   std::cout << "  " << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ')
             << (show_opponent_field_for_targeting ? Colors::YELLOW + "   (0: RC FL)" + Colors::RESET : Colors::BRIGHT_BLACK + "   (RC FL)" + Colors::RESET)
             << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ')
-            << Colors::BRIGHT_YELLOW + "   (VC)" + Colors::RESET
+            << (Colors::BRIGHT_YELLOW + "   (VC)" + Colors::RESET)
             << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ')
             << (show_opponent_field_for_targeting ? Colors::YELLOW + "   (1: RC FR)" + Colors::RESET : Colors::BRIGHT_BLACK + "   (RC FR)" + Colors::RESET)
             << V_BORDER << std::endl;
 
-  // Back row
-  std::cout << Colors::BRIGHT_CYAN << "\n  แถวหลัง:" << Colors::RESET << std::endl;
-  std::cout << "  " << Colors::CYAN << "├" << std::string(card_cell_width, '─') << "┼"
-            << std::string(card_cell_width, '─') << "┼" << std::string(card_cell_width, '─')
-            << "┤" << Colors::RESET << std::endl;
+  // Field Separator (Middle)
+  std::cout << "  " << Colors::CYAN << "├" << H_BORDER_THIN_SEGMENT << "┼" << H_BORDER_THIN_SEGMENT
+            << "┼" << H_BORDER_THIN_SEGMENT << "┤" << Colors::RESET << std::endl;
 
+  // Back Row Cards
   std::cout << "  " << V_BORDER << formatCardForDisplayImproved(rear_guard_circles[RC_BACK_LEFT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_BACK_LEFT)])
             << V_BORDER << formatCardForDisplayImproved(rear_guard_circles[RC_BACK_CENTER], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_BACK_CENTER)])
             << V_BORDER << formatCardForDisplayImproved(rear_guard_circles[RC_BACK_RIGHT], card_cell_width, unit_is_standing[getUnitStatusIndexForRC(RC_BACK_RIGHT)])
             << V_BORDER << std::endl;
 
-  std::cout << "  " << Colors::CYAN << "└" << std::string(card_cell_width, '─') << "┴"
-            << std::string(card_cell_width, '─') << "┴" << std::string(card_cell_width, '─')
-            << "┘" << Colors::RESET << std::endl;
+  // Back Row Labels
+  std::cout << "  " << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ')
+            << (show_opponent_field_for_targeting ? Colors::YELLOW + "   (2: RC BL)" + Colors::RESET : Colors::BRIGHT_BLACK + "   (RC BL)" + Colors::RESET)
+            << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ')
+            << (show_opponent_field_for_targeting ? Colors::YELLOW + "   (3: RC BC)" + Colors::RESET : Colors::BRIGHT_BLACK + "   (RC BC)" + Colors::RESET)
+            << V_BORDER << std::left << std::setw(card_cell_width) << std::setfill(' ')
+            << (show_opponent_field_for_targeting ? Colors::YELLOW + "   (4: RC BR)" + Colors::RESET : Colors::BRIGHT_BLACK + "   (RC BR)" + Colors::RESET)
+            << V_BORDER << std::endl;
+
+  // Field Separator (Bottom)
+  std::cout << "  " << Colors::CYAN << "└" << H_BORDER_THIN_SEGMENT << "┴" << H_BORDER_THIN_SEGMENT
+            << "┴" << H_BORDER_THIN_SEGMENT << "┘" << Colors::RESET << std::endl;
 
   // Damage Zone
   std::cout << "\n"
@@ -643,7 +732,9 @@ void Player::displayField(bool show_opponent_field_for_targeting) const
     {
       std::string name_short = damage_zone[i].getName().substr(0, 6);
       if (damage_zone[i].getName().length() > 6)
+      {
         name_short += "..";
+      }
       std::cout << Colors::RED << "[" << UIHelper::GetGradeIcon(damage_zone[i].getGrade())
                 << " " << name_short << "]" << Colors::RESET;
       if (i < damage_zone.size() - 1)
@@ -651,14 +742,15 @@ void Player::displayField(bool show_opponent_field_for_targeting) const
     }
   }
   std::cout << std::endl;
-  UIHelper::PrintHorizontalLine('═', 70, Colors::CYAN);
+  UIHelper::PrintHorizontalLine('=', 70, Colors::CYAN);
 }
 
 void Player::displayHand(bool show_details) const
 {
-  UIHelper::PrintHorizontalLine('─', 40, Colors::YELLOW);
+  UIHelper::PrintHorizontalLine('-', 40, Colors::YELLOW);
   std::cout << Colors::YELLOW << Icons::HAND << " มือของ " << Colors::BOLD << name
             << Colors::RESET << Colors::YELLOW << " (" << hand.size() << " ใบ)" << Colors::RESET << std::endl;
+
   if (hand.empty())
   {
     std::cout << Colors::BRIGHT_BLACK << "(มือว่าง)" << Colors::RESET << std::endl;
@@ -676,16 +768,7 @@ void Player::displayHand(bool show_details) const
       std::cout << std::endl;
     }
   }
-  UIHelper::PrintHorizontalLine('─', 40, Colors::YELLOW);
-}
-
-void Player::displayFullStatus() const
-{
-  UIHelper::ClearScreen();
-  UIHelper::PrintSectionHeader("FULL STATUS: " + name, Icons::PLAYER);
-  displayField();
-  displayHand(true);
-  UIHelper::WaitForKeyPress();
+  UIHelper::PrintHorizontalLine('-', 40, Colors::YELLOW);
 }
 
 // Getters
@@ -698,6 +781,15 @@ const std::array<std::optional<Card>, NUM_REAR_GUARD_CIRCLES> &Player::getRearGu
 Deck &Player::getDeck() { return deck; }
 const Deck &Player::getDeck() const { return deck; }
 
+void Player::displayFullStatus() const
+{
+  UIHelper::ClearScreen();
+  UIHelper::PrintSectionHeader("FULL STATUS: " + name, Icons::PLAYER);
+  displayField();
+  displayHand(true);
+  MenuSystem::WaitForKeyPress();
+}
+
 void Player::takeDamage(const Card &damage_card)
 {
   UIHelper::ShowDamageAnimation();
@@ -709,12 +801,27 @@ void Player::takeDamage(const Card &damage_card)
     std::cout << Colors::BRIGHT_RED << Colors::BOLD << Icons::SKULL << " " << name
               << " ได้รับ 6 ดาเมจแล้ว! " << name << " แพ้แล้ว! " << Icons::SKULL
               << Colors::RESET << std::endl;
+    // Potentially add game over logic here or set a flag
   }
 }
 
-void Player::placeCardIntoSoul(const Card &card)
+void Player::addCardToHand(const Card &card)
 {
-  soul.push_back(card);
+  hand.push_back(card);
+}
+
+void Player::clearGuardianZoneAndMoveToDrop()
+{
+  if (!guardian_zone.empty())
+  {
+    std::cout << Colors::BRIGHT_BLACK << Icons::DROP << " " << name << " ย้ายการ์ดจาก Guardian Zone ไป Drop Zone:" << Colors::RESET << std::endl;
+    for (const auto &card : guardian_zone)
+    {
+      std::cout << "  - " << UIHelper::FormatCard(card.getName(), card.getGrade()) << std::endl;
+      drop_zone.push_back(card);
+    }
+    guardian_zone.clear();
+  }
 }
 
 void Player::discardFromHandToDrop(size_t hand_card_index)
@@ -722,21 +829,16 @@ void Player::discardFromHandToDrop(size_t hand_card_index)
   if (hand_card_index < hand.size())
   {
     Card discarded_card = hand[hand_card_index];
-    drop_zone.push_back(discarded_card);
-    hand.erase(hand.begin() + hand_card_index);
     std::cout << Colors::BRIGHT_BLACK << Icons::DROP << " " << name << " ทิ้งการ์ด '"
               << discarded_card.getName() << "' จากมือลง Drop Zone." << Colors::RESET << std::endl;
+    hand.erase(hand.begin() + hand_card_index);
+    drop_zone.push_back(discarded_card);
   }
 }
 
-void Player::clearGuardianZoneAndMoveToDrop()
+void Player::placeCardIntoSoul(const Card &card)
 {
-  if (!guardian_zone.empty())
-  {
-    for (const auto &card : guardian_zone)
-    {
-      drop_zone.push_back(card);
-    }
-    guardian_zone.clear();
-  }
+  soul.push_back(card);
+  std::cout << Colors::MAGENTA << Icons::SOUL << " " << name << " วางการ์ด '"
+            << card.getName() << "' ลง Soul." << Colors::RESET << std::endl;
 }
