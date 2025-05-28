@@ -13,12 +13,10 @@
 
 - **Compiler**: g++ หรือ clang++ ที่รองรับ C++17
 - **OS**: Windows, macOS, Linux
-- **RAM**: อย่างน้อย 1GB
-- **Storage**: อย่างน้อย 50MB
 
 ### 🔧 การติดตั้ง
 
-#### วิธีที่ 1: ใช้ Script (แนะนำ)
+#### ใช้ Script
 
 **สำหรับ Linux/macOS:**
 
@@ -37,19 +35,6 @@ chmod +x compile_and_run.sh
 & ".\fibo_card_commandos.exe"
 ```
 
-#### วิธีที่ 2: ใช้ Makefile
-
-```bash
-# Build และรัน
-make run
-
-# หรือ build อย่างเดียว
-make
-
-# ล้างไฟล์ build
-make clean
-```
-
 ## 📦 โครงสร้างโปรเจค
 
 ```
@@ -65,7 +50,6 @@ make clean
 ├── 📊 Data/               # ข้อมูลเกม
 │   └── cards.json         # ฐานข้อมูลการ์ด
 ├── 🔧 Build Tools/        # เครื่องมือสำหรับ build
-│   ├── Makefile
 │   ├── compile_and_run.sh
 │   └── compile_and_run.bat
 └── 📖 Documentation/      # เอกสาร
@@ -92,36 +76,3 @@ make clean
 4. **🃏 Main Phase**: Call ยูนิตลง Rear Guard
 5. **⚔️ Battle Phase**: โจมตีและป้องกัน
 6. **🌙 End Phase**: ล้างสถานะและจบเทิร์น
-
-## 👥 ผู้พัฒนา
-
-**FIBO Card Commandos** พัฒนาโดย:
-
-- 🎓 นักศึกษา FRA142/FRA143
-- 🏫 สถาบันวิทยาการหุ่นยนต์ภาคสนาม
-- 🎯 มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าธนบุรี
-
-## 🐛 การแก้ไขปัญหาที่พบบ่อย
-
-1. **สีไม่แสดงใน Windows**
-
-   - ใช้ Windows Terminal หรือ PowerShell
-   - เปิดใช้งาน ANSI color support
-
-2. **ไอคอน Unicode แสดงผลไม่ถูกต้อง**
-
-   - ตั้งค่า font ที่รองรับ Unicode
-   - ตั้งค่า terminal encoding เป็น UTF-8
-
-3. **ไม่พบไฟล์ cards.json**
-
-   - ตรวจสอบว่าไฟล์อยู่ใน Data/
-   - รันจากโฟลเดอร์หลักของโปรเจค
-
-4. **Compilation error**
-   - ตรวจสอบว่าใช้ g++ เวอร์ชัน 7+ หรือ Clang 5+
-   - ตรวจสอบว่าติดตั้ง C++17 แล้ว
-
-## 📝 License
-
-Copyright © 2025 FIBO KMUTT. All rights reserved.
